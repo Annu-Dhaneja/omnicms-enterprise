@@ -1,7 +1,18 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// import { GoogleGenerativeAI } from '@google/generative-ai';
+class GoogleGenerativeAI {
+  constructor(apiKey: string) {}
+  getGenerativeModel(config: any) {
+    return {
+      generateContent: async (req: any) => {
+        return { response: { text: () => "AI is currently disabled for maintenance." }, text: "AI disabled." };
+      }
+    };
+  }
+}
+
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import { readDB, writeDB } from './server-db.js';
