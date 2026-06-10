@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "websiteSettings": {
+      "title": "Website Settings",
+      "description": "Defines global configurations, themes, active presets, site-wide branding, and navigation hierarchies.",
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string", "enum": ["light", "dark"] },
+        "palette": { "type": "string", "enum": ["default", "royal-blue", "divine-emerald", "amber-sunset", "cosmic-purple"] },
+        "borderRadius": { "type": "string" },
+        "shadows": { "type": "string" },
+        "headerStyle": { "type": "string" },
+        "footerStyle": { "type": "string" },
+        "seoTitle": { "type": "string" },
+        "seoDescription": { "type": "string" },
+        "seoKeywords": { "type": "string" }
+      },
+      "required": ["mode", "palette", "borderRadius"]
+    },
+    "service": {
+      "title": "Astrological Service",
+      "description": "Represents an expert consultation offering available on the website.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "icon": { "type": "string" },
+        "name": { "type": "string" },
+        "desc": { "type": "string" },
+        "price": { "type": "string" },
+        "duration": { "type": "string" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "name", "price", "active"]
+    },
+    "lead": {
+      "title": "Lead and Booking",
+      "description": "Records client contact forms, kundli generation queries, and scheduled consultation bookings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "service": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "place": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["New", "Contacted", "In-Progress", "Consulted", "Cancelled"] },
+        "notes": { "type": "string" },
+        "bookingDate": { "type": "string" },
+        "bookingTime": { "type": "string" },
+        "amountPaid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "phone", "status", "createdAt"]
+    },
+    "blogPost": {
+      "title": "Vedic Blog Post",
+      "description": "Represents articles, transits insights, and gemstone guides written by the Acharya.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "icon": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string" },
+        "readTime": { "type": "string" },
+        "author": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "published"] }
+      },
+      "required": ["id", "title", "content", "status"]
+    },
+    "faqItem": {
+      "title": "FAQ Item",
+      "description": "A frequently asked question and answer combination.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "q": { "type": "string" },
+        "a": { "type": "string" }
+      },
+      "required": ["id", "q", "a"]
+    }
+  },
+  "firestore": {
+    "/settings/global": {
+      "schema": "websiteSettings",
+      "description": "Stores site-wide variables, coloring parameters, and SEO guidelines."
+    },
+    "/services/{serviceId}": {
+      "schema": "service",
+      "description": "Primary catalog of astrological consulting products."
+    },
+    "/leads/{leadId}": {
+      "schema": "lead",
+      "description": "Client intake and scheduling system database list."
+    },
+    "/blog/{postId}": {
+      "schema": "blogPost",
+      "description": "Wisdom archives containing transit guides, spiritual studies, and gems analyses."
+    },
+    "/faqs/{faqId}": {
+      "schema": "faqItem",
+      "description": "Informational lists about birth times, chart readings, and Vastu criteria."
+    }
+  }
+}

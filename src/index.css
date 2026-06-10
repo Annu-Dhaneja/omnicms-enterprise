@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;705&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;501&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  background-color: #080B12;
+  color: #e8eaf0;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.01);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* Elegant Components styling */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs transform transition-all active:scale-[0.98] cursor-pointer;
+}
+
+.btn-sm {
+  @apply py-1.5 px-3.5 text-[11px];
+}
+
+.btn-gold {
+  @apply bg-gradient-to-r from-[#C9A227] to-[#f0d070] text-[#1a1000] shadow-[0_4px_16px_rgba(201,162,39,0.3)] hover:scale-[1.02];
+}
+
+.btn-outline-gold {
+  @apply border border-[#C9A227]/30 text-[#C9A227] bg-[#C9A227]/5 hover:bg-[#C9A227]/10;
+}
+
+.form-input {
+  @apply w-full bg-[#080B12] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/20;
+}
+
+.form-textarea {
+  @apply w-full bg-[#080B12] border border-white/10 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/20 resize-none h-32;
+}
+
+.form-select {
+  @apply w-full bg-[#080B12] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#C9A227] cursor-pointer;
+}
+
+/* Elegant Cosmic Badges */
+.cms-badge {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-[10px] font-bold text-[#bba7ff] uppercase tracking-wider;
+}
+
+.logo-emblem {
+  @apply rounded-xl bg-gradient-to-br from-[#C9A227] to-[#f0d070] text-[#1a1000] font-serif font-black text-xl flex items-center justify-center shadow-[0_4px_12px_rgba(201,162,39,0.25)];
+}
+
+/* Animations */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInDown {
+  animation: fadeInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Dynamic astronomical circle */
+.rotator-globe {
+  animation: rotateClockwise 85s linear infinite;
+}
+
+@keyframes rotateClockwise {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

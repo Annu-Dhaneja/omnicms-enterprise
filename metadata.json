@@ -1,0 +1,6 @@
+{
+  "name": "Enterprise CMS and Astrologer Website Builder",
+  "description": "A production-ready Enterprise CMS and intuitive Drag-and-Drop Website Builder connected dynamically with a fully functional Vedic Astrology booking, horoscope, and billing frontend.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
