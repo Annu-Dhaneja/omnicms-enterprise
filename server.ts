@@ -117,7 +117,8 @@ async function sendSystemEmail(to: string, subject: string, htmlContent: string,
       },
       connectionTimeout: 5000,
       greetingTimeout: 5000,
-      socketTimeout: 5000
+      socketTimeout: 5000,
+      family: 4 // Force IPv4 to prevent Vercel AWS Lambda IPv6 routing hangs
     });
 
     // Verify SMTP connection before sending OTP / Mail
@@ -685,7 +686,8 @@ function defineRoutes() {
         },
         connectionTimeout: 5000,
         greetingTimeout: 5000,
-        socketTimeout: 5000
+        socketTimeout: 5000,
+        family: 4
       });
 
       // Verify connection before dispatching test mail
@@ -773,7 +775,8 @@ function defineRoutes() {
         },
         connectionTimeout: 5000,
         greetingTimeout: 5000,
-        socketTimeout: 5000
+        socketTimeout: 5000,
+        family: 4
       });
 
       await transporter.verify();
@@ -803,7 +806,8 @@ function defineRoutes() {
         },
         connectionTimeout: 5000,
         greetingTimeout: 5000,
-        socketTimeout: 5000
+        socketTimeout: 5000,
+        family: 4
       });
 
       await transporter.verify();
