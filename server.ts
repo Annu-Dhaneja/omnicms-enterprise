@@ -121,24 +121,21 @@ async function sendSystemEmail(to: string, subject: string, htmlContent: string,
       family: 4 // Force IPv4 to prevent Vercel AWS Lambda IPv6 routing hangs
     });
 
-    // Wrap SMTP transport in a strict 6-second timeout to prevent Vercel 500 crash
-    const sendPromise = new Promise(async (resolve, reject) => {
-      try {
-        await transporter.verify();
-        const info = await transporter.sendMail({
-          from: `"${smtp.senderName || 'Admin'}" <${smtp.senderEmail || smtp.username}>`,
-          to,
-          subject,
-          html: htmlContent
-        });
-        resolve(info);
-      } catch (err) {
-        reject(err);
-      }
+    // Wrap SMTP transport in a strict 4-second timeout to prevent Vercel 500 crash
+    const sendPromise = transporter.verify().then(() => {
+      return transporter.sendMail({
+        from: `"${smtp.senderName || 'Admin'}" <${smtp.senderEmail || smtp.username}>`,
+        to,
+        subject,
+        html: htmlContent
+      });
     });
+    
+    // Prevent unhandled promise rejection if timeout wins the race
+    sendPromise.catch(() => {});
 
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('SMTP Connection Timed Out. Gmail may be blocking AWS Vercel IPs. Please use an App Password or switch to Resend/Brevo.')), 6000)
+      setTimeout(() => reject(new Error('SMTP Connection Timed Out. Gmail may be blocking AWS Vercel IPs. Please use an App Password or switch to Resend/Brevo.')), 4000)
     );
 
     const info = await Promise.race([sendPromise, timeoutPromise]) as any;
