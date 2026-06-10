@@ -121,16 +121,29 @@ async function sendSystemEmail(to: string, subject: string, htmlContent: string,
       family: 4 // Force IPv4 to prevent Vercel AWS Lambda IPv6 routing hangs
     });
 
-    // Verify SMTP connection before sending OTP / Mail
-    await transporter.verify();
-
-    const info = await transporter.sendMail({
-      from: `"${smtp.senderName || 'Astrologer Acharya Khurana'}" <${smtp.senderEmail || smtp.username}>`,
-      to,
-      subject,
-      html: htmlContent
+    // Wrap SMTP transport in a strict 6-second timeout to prevent Vercel 500 crash
+    const sendPromise = new Promise(async (resolve, reject) => {
+      try {
+        await transporter.verify();
+        const info = await transporter.sendMail({
+          from: `"${smtp.senderName || 'Admin'}" <${smtp.senderEmail || smtp.username}>`,
+          to,
+          subject,
+          html: htmlContent
+        });
+        resolve(info);
+      } catch (err) {
+        reject(err);
+      }
     });
 
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('SMTP Connection Timed Out. Gmail may be blocking AWS Vercel IPs. Please use an App Password or switch to Resend/Brevo.')), 6000)
+    );
+
+    const info = await Promise.race([sendPromise, timeoutPromise]) as any;
+
+    // Log the successful dispatch
     console.log(`✨ Email successfully sent to ${to}: MessageId: ${info.messageId}`);
     
     const updatedDb = readDB();
@@ -1420,6 +1433,33 @@ function defineRoutes() {
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ==========================================
+  // SOCIAL MEDIA LINKS API
+  // ==========================================
+  app.get('/api/settings/social', (req, res) => {
+    try {
+      const db = readDB();
+      res.json(db.social_media || {});
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch social links' });
+    }
+  });
+
+  app.post('/api/settings/social', requireAdminAuth, (req, res) => {
+    try {
+      const db = readDB();
+      const newLinks = req.body;
+      db.social_media = {
+        ...db.social_media,
+        ...newLinks
+      };
+      writeDB(db);
+      res.json({ success: true, social_media: db.social_media });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update social links' });
     }
   });
 

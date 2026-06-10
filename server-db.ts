@@ -228,6 +228,15 @@ export interface AstrologyToolkitSettings {
   activeTools: string[];
 }
 
+export interface SocialMediaLinks {
+  instagram?: string;
+  x?: string;
+  facebook?: string;
+  youtube?: string;
+  linkedin?: string;
+  threads?: string;
+}
+
 export interface Database {
   books: Book[];
   book_categories: BookCategory[];
@@ -250,6 +259,7 @@ export interface Database {
   notification_settings?: NotificationSettings;
   ai_guru_chats?: AIGuruConversation[];
   astrology_toolkit_settings?: AstrologyToolkitSettings;
+  social_media?: SocialMediaLinks;
   admin_otp?: {
     otp: string;
     email: string;
@@ -593,6 +603,14 @@ export function readDB(): Database {
         'manglik', 'gemstone', 'lucky_calculator', 'muhurat', 'panchang', 'transit', 'dasha'
       ]
     };
+    if (!parsed.social_media) parsed.social_media = {
+        instagram: '',
+        x: '',
+        facebook: '',
+        youtube: '',
+        linkedin: '',
+        threads: ''
+    };
     return parsed;
   } catch (err) {
     console.error("Failed to read database.json, using fallback", err);
@@ -622,6 +640,14 @@ export function readDB(): Database {
           'birth_chart', 'kundli', 'horoscope', 'numerology', 'compatibility', 
           'manglik', 'gemstone', 'lucky_calculator', 'muhurat', 'panchang', 'transit', 'dasha'
         ]
+      },
+      social_media: {
+        instagram: '',
+        x: '',
+        facebook: '',
+        youtube: '',
+        linkedin: '',
+        threads: ''
       }
     };
   }

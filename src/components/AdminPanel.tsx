@@ -40,7 +40,14 @@ import {
   Volume2,
   Calendar,
   Bell,
-  Check
+  Check,
+  BarChart3,
+  Server,
+  CheckCircle,
+  ShieldAlert,
+  Star,
+  Box,
+  Share2
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -89,7 +96,7 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'content' | 'layout' | 'theme' | 'media' | 'crm' | 'blogs' | 'seo' | 'analytics' | 'backups' | 'books' | 'ai_guru' | 'toolkit' | 'bookings' | 'notifications' | 'crm_dashboard' | 'users' | 'sound_settings' | 'monitoring'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'layout' | 'theme' | 'media' | 'crm' | 'blogs' | 'seo' | 'analytics' | 'social_media' | 'backups' | 'books' | 'ai_guru' | 'toolkit' | 'bookings' | 'notifications' | 'crm_dashboard' | 'users' | 'sound_settings' | 'monitoring'>('content');
 
   // --- REAL-TIME & ADVANCED ASTRO SYSTEM STATES ---
   const [dbNotifications, setDbNotifications] = useState<any[]>([]);
@@ -173,6 +180,11 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
   const [blog, setBlog] = useState(initialData.blog);
   const [faqs, setFaqs] = useState(initialData.faqs);
   const [theme, setTheme] = useState(initialData.theme);
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
+  
+  const [socialLinks, setSocialLinks] = useState({
+    instagram: '', x: '', facebook: '', youtube: '', linkedin: '', threads: ''
+  });
   const [sectionOrders, setSectionOrders] = useState<SectionOrder[]>(initialData.sectionOrders);
 
   // Expanded Seeker configurations states
@@ -494,6 +506,20 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
       }
     } catch (err: any) {
       alert(`❌ Error connecting to SMTP system: ${err.message}`);
+    }
+  };
+
+  const handleSaveSocialLinks = async () => {
+    try {
+      const res = await fetch('/api/settings/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(socialLinks)
+      });
+      if (!res.ok) throw new Error('Failed to update social links');
+      alert("Social media links saved successfully!");
+    } catch (error) {
+      alert("Error saving social media links.");
     }
   };
 
@@ -1230,7 +1256,12 @@ ${urls.map(url => `  <url>
               <Globe className="w-4 h-4" /> SEO & Sitemap
             </button>
             <button onClick={() => setActiveTab('analytics')} className={`w-full flex items-center gap-2.5 px-6 py-3.5 text-sm font-semibold border-l-4 transition-all ${activeTab === 'analytics' ? 'border-[#C9A227] text-[#C9A227] bg-[#C9A227]/5' : 'border-transparent text-[#8b96aa] hover:text-white hover:bg-white/5'}`}>
-              <BarChart className="w-4 h-4" /> Analytics & Logs
+              <BarChart3 className="w-5 h-5" />
+              Traffic Analytics
+            </button>
+            <button onClick={() => setActiveTab('social_media')} className={`w-full flex items-center gap-2.5 px-6 py-3.5 text-sm font-semibold border-l-4 transition-all ${activeTab === 'social_media' ? 'border-[#C9A227] text-[#C9A227] bg-[#C9A227]/5' : 'border-transparent text-[#8b96aa] hover:text-white hover:bg-white/5'}`}>
+              <Share2 className="w-5 h-5" />
+              Social Media
             </button>
             <button onClick={() => setActiveTab('backups')} className={`w-full flex items-center gap-2.5 px-6 py-3.5 text-sm font-semibold border-l-4 transition-all ${activeTab === 'backups' ? 'border-[#C9A227] text-[#C9A227] bg-[#C9A227]/5' : 'border-transparent text-[#8b96aa] hover:text-white hover:bg-white/5'}`}>
               <Database className="w-4 h-4" /> Backup System
@@ -3389,6 +3420,35 @@ ${urls.map(url => `  <url>
           )}
 
           {/* TAB 9: BACKUPS & RESTORES */}
+          {activeTab === 'social_media' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2"><Share2 className="w-5 h-5 text-[#C9A227]"/> Social Media Configurations</h3>
+                  <p className="text-sm text-[#8b96aa]">Manage outgoing links for all social platforms displayed in the site footer.</p>
+                </div>
+                <button onClick={handleSaveSocialLinks} className="btn-primary flex items-center gap-2 px-6">
+                  <Save className="w-4 h-4"/> Save Social Links
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#04060b] p-6 rounded-xl border border-white/5">
+                {['instagram', 'x', 'facebook', 'youtube', 'linkedin', 'threads'].map((platform) => (
+                  <div key={platform} className="space-y-2">
+                    <label className="text-sm font-semibold text-white capitalize">{platform === 'x' ? 'X (Twitter)' : platform} URL</label>
+                    <input 
+                      type="url" 
+                      placeholder={`https://${platform === 'x' ? 'x' : platform}.com/yourprofile`}
+                      value={(socialLinks as any)[platform]}
+                      onChange={(e) => setSocialLinks({...socialLinks, [platform]: e.target.value})}
+                      className="form-input" 
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'backups' && (
             <div className="space-y-6 max-w-2xl">
               <div>

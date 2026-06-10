@@ -10,7 +10,14 @@ import {
   MessageCircle,
   ChevronUp,
   X,
-  Send
+  Send,
+  Instagram, 
+  Twitter, 
+  Facebook, 
+  Youtube, 
+  Linkedin, 
+  AtSign,
+  Star
 } from 'lucide-react';
 import { BackupData, Lead, Service, Order, PageId, Book } from './types';
 import { getCMSData, saveCMSData, getLeads, saveLeads, logActivity } from './utils';
@@ -54,6 +61,9 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [selectedBookingService, setSelectedBookingService] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [socialLinks, setSocialLinks] = useState({
+    instagram: '', x: '', facebook: '', youtube: '', linkedin: '', threads: ''
+  });
 
   // WhatsApp Widget UI Toggles
   const [isWaWidgetOpen, setIsWaWidgetOpen] = useState(false);
@@ -160,6 +170,13 @@ export default function App() {
 
   useEffect(() => {
     syncStoreData();
+    // Fetch Social Media
+    fetch('/api/settings/social')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) setSocialLinks(data);
+      })
+      .catch(() => {});
   }, []);
 
   // Save modified CMS layouts
@@ -588,7 +605,7 @@ export default function App() {
       </main>
 
       {/* Dynamic Styled Footer */}
-      <footer className="bg-[#04060b] border-t border-white/5 py-12 relative z-10 text-left">
+      <footer className="bg-[#04060b] border-t border-white/5 py-16 relative z-10 text-left">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
           
           <div className="space-y-4">
@@ -599,6 +616,15 @@ export default function App() {
             <p className="text-xs text-[#596478] leading-relaxed">
               Merging cosmic predictive formulas with modern-day psychological advice to steer souls safely through transitions.
             </p>
+            {/* SOCIAL MEDIA LINKS */}
+            <div className="flex items-center gap-4 pt-2">
+              {socialLinks.instagram && <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-[#596478] hover:text-[#C9A227] transition-colors"><Instagram className="w-4 h-4" /></a>}
+              {socialLinks.x && <a href={socialLinks.x} target="_blank" rel="noopener noreferrer" className="text-[#596478] hover:text-[#C9A227] transition-colors"><Twitter className="w-4 h-4" /></a>}
+              {socialLinks.facebook && <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-[#596478] hover:text-[#C9A227] transition-colors"><Facebook className="w-4 h-4" /></a>}
+              {socialLinks.youtube && <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="text-[#596478] hover:text-[#C9A227] transition-colors"><Youtube className="w-4 h-4" /></a>}
+              {socialLinks.linkedin && <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="text-[#596478] hover:text-[#C9A227] transition-colors"><Linkedin className="w-4 h-4" /></a>}
+              {socialLinks.threads && <a href={socialLinks.threads} target="_blank" rel="noopener noreferrer" className="text-[#596478] hover:text-[#C9A227] transition-colors"><AtSign className="w-4 h-4" /></a>}
+            </div>
           </div>
 
           <div className="space-y-3">
