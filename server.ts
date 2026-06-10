@@ -665,7 +665,6 @@ function writeDB(db: Database): void {
 
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 // import { GoogleGenerativeAI } from '@google/generative-ai';
 class GoogleGenerativeAI {
   constructor(apiKey: string) {}
@@ -2977,6 +2976,8 @@ defineRoutes();
 // Incorporate Vite middleware inside dev environments
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   (async () => {
+    const viteModule = 'vite';
+    const { createServer: createViteServer } = await import(viteModule);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
