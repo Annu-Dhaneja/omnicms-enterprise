@@ -95,7 +95,10 @@ async function sendSystemEmail(to: string, subject: string, htmlContent: string,
       },
       tls: {
         rejectUnauthorized: false
-      }
+      },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000
     });
 
     // Verify SMTP connection before sending OTP / Mail
@@ -660,7 +663,10 @@ function defineRoutes() {
         },
         tls: {
           rejectUnauthorized: false
-        }
+        },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000
       });
 
       // Verify connection before dispatching test mail
@@ -745,7 +751,10 @@ function defineRoutes() {
         },
         tls: {
           rejectUnauthorized: false
-        }
+        },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000
       });
 
       await transporter.verify();
@@ -772,7 +781,10 @@ function defineRoutes() {
         },
         tls: {
           rejectUnauthorized: false
-        }
+        },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 5000
       });
 
       await transporter.verify();
