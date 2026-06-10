@@ -827,7 +827,7 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
       setAuthLoading(true);
       const user = await logInWithGoogle();
       
-      const envAdmins = import.meta.env.VITE_ADMIN_EMAILS;
+      const envAdmins = (import.meta as any).env.VITE_ADMIN_EMAILS;
       let allowedAdmins = ['tnkhurana3@gmail.com', 'andad622@gmail.com'];
       if (envAdmins && envAdmins !== 'undefined') {
         allowedAdmins = [...allowedAdmins, ...envAdmins.split(',').map((e: string) => e.trim().toLowerCase())];

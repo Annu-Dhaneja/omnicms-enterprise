@@ -119,7 +119,7 @@ async function sendSystemEmail(to: string, subject: string, htmlContent: string,
       greetingTimeout: 5000,
       socketTimeout: 5000,
       family: 4 // Force IPv4 to prevent Vercel AWS Lambda IPv6 routing hangs
-    });
+    } as any);
 
     // Wrap SMTP transport in a strict 4-second timeout to prevent Vercel 500 crash
     const sendPromise = transporter.verify().then(() => {
@@ -698,7 +698,7 @@ function defineRoutes() {
         greetingTimeout: 5000,
         socketTimeout: 5000,
         family: 4
-      });
+      } as any);
 
       // Verify connection before dispatching test mail
       await transporter.verify();
@@ -787,7 +787,7 @@ function defineRoutes() {
         greetingTimeout: 5000,
         socketTimeout: 5000,
         family: 4
-      });
+      } as any);
 
       await transporter.verify();
       res.json({ status: 'Connected' });
@@ -818,7 +818,7 @@ function defineRoutes() {
         greetingTimeout: 5000,
         socketTimeout: 5000,
         family: 4
-      });
+      } as any);
 
       await transporter.verify();
       res.json({ success: true, message: 'SMTP handshake completed successfully. Connection established!' });
