@@ -4,7 +4,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
-import { readDB, writeDB } from './server-db';
+import { readDB, writeDB } from './server-db.js';
 
 // Load environment variables
 dotenv.config();
