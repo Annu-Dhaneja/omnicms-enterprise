@@ -14,12 +14,19 @@ function getSmtpConfig(db: any) {
   if (process.env.SMTP_HOST && process.env.SMTP_USER) {
     return {
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
+      port: parseInt(process.env.SMTP_PORT || '465', 10),
+      secure: process.env.SMTP_SECURE !== 'false',
       username: process.env.SMTP_USER,
-      password: process.env.SMTP_PASS || '',
-      senderName: process.env.SMTP_SENDER_NAME || 'Admin',
-      senderEmail: process.env.SMTP_SENDER_EMAIL || process.env.SMTP_USER,
+      password: process.env.SMTP_PASSWORD
+    };
+  }
+  
+  // Override db fallback to use 465/true on Vercel to prevent hanging
+  if (db?.smtp) {
+    return {
+      ...db.smtp,
+      port: db.smtp.port === 587 && process.env.VERCEL ? 465 : db.smtp.port,
+      secure: db.smtp.port === 587 && process.env.VERCEL ? true : db.smtp.secure
     };
   }
   return db?.smtp;
@@ -27,10 +34,11 @@ function getSmtpConfig(db: any) {
 
 function getAllowedAdmins() {
   const envAdmins = process.env.ADMIN_EMAILS;
-  if (envAdmins) {
-    return envAdmins.split(',').map(e => e.trim().toLowerCase());
+  let allowedAdmins = ['tnkhurana3@gmail.com', 'andad622@gmail.com'];
+  if (envAdmins && envAdmins !== 'undefined') {
+    allowedAdmins = [...allowedAdmins, ...envAdmins.split(',').map(e => e.trim().toLowerCase())];
   }
-  return ['tnkhurana3@gmail.com', 'andad622@gmail.com'];
+  return allowedAdmins;
 }
 
 // Lazily initialize Gemini SDK Client
@@ -87,8 +95,8 @@ async function sendSystemEmail(to: string, subject: string, htmlContent: string,
   try {
     const transporter = nodemailer.createTransport({
       host: smtp.host,
-      port: smtp.port || 587,
-      secure: smtp.secure || false,
+      port: smtp.port || 465,
+      secure: smtp.secure !== false,
       auth: {
         user: smtp.username,
         pass: smtp.password || ''
@@ -655,8 +663,8 @@ function defineRoutes() {
 
       const transporter = nodemailer.createTransport({
         host: smtp.host,
-        port: smtp.port || 587,
-        secure: smtp.secure || false,
+        port: smtp.port || 465,
+        secure: smtp.secure !== false,
         auth: {
           user: smtp.username,
           pass: smtp.password || ''
@@ -743,8 +751,8 @@ function defineRoutes() {
 
       const transporter = nodemailer.createTransport({
         host: smtp.host,
-        port: smtp.port || 587,
-        secure: smtp.secure || false,
+        port: smtp.port || 465,
+        secure: smtp.secure !== false,
         auth: {
           user: smtp.username,
           pass: smtp.password || ''
@@ -773,8 +781,8 @@ function defineRoutes() {
 
       const transporter = nodemailer.createTransport({
         host,
-        port: port || 587,
-        secure: secure ?? false,
+        port: port || 465,
+        secure: secure !== false,
         auth: {
           user: username,
           pass: password || ''

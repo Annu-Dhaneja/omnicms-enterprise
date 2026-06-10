@@ -802,7 +802,11 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
       const user = await logInWithGoogle();
       
       const envAdmins = import.meta.env.VITE_ADMIN_EMAILS;
-      const allowedAdmins = envAdmins ? envAdmins.split(',').map((e: string) => e.trim().toLowerCase()) : ['tnkhurana3@gmail.com', 'andad622@gmail.com'];
+      let allowedAdmins = ['tnkhurana3@gmail.com', 'andad622@gmail.com'];
+      if (envAdmins && envAdmins !== 'undefined') {
+        allowedAdmins = [...allowedAdmins, ...envAdmins.split(',').map((e: string) => e.trim().toLowerCase())];
+      }
+      
       if (user && user.email && allowedAdmins.includes(user.email.toLowerCase())) {
         setIsAuthenticated(true);
         logActivity("SUPER ADMIN SIGN IN", `Authorized session successfully via Google for: ${user.email}`);
