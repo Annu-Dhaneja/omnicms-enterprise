@@ -12,12 +12,23 @@ dotenv.config();
 // Configuration Helpers
 function getSmtpConfig(db: any) {
   if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+    let port = parseInt(process.env.SMTP_PORT || '465', 10);
+    let secure = process.env.SMTP_SECURE !== 'false';
+    
+    // Forcibly override user Vercel dashboard mistakes to prevent timeout crashes
+    if (process.env.VERCEL) {
+      port = 465;
+      secure = true;
+    }
+
     return {
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '465', 10),
-      secure: process.env.SMTP_SECURE !== 'false',
+      port,
+      secure,
       username: process.env.SMTP_USER,
-      password: process.env.SMTP_PASSWORD
+      password: process.env.SMTP_PASSWORD || process.env.SMTP_PASS || '',
+      senderName: process.env.SMTP_SENDER_NAME || 'Admin',
+      senderEmail: process.env.SMTP_SENDER_EMAIL || process.env.SMTP_USER,
     };
   }
   
