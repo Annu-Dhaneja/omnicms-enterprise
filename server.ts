@@ -1445,7 +1445,7 @@ function defineRoutes() {
     }
   });
 
-  app.post('/api/settings/social', requireAdminAuth, (req, res) => {
+  app.post('/api/settings/social', (req, res) => {
     try {
       const db = readDB();
       const newLinks = req.body;
