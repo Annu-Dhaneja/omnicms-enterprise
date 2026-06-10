@@ -605,12 +605,12 @@ function readDB(): Database {
       ]
     };
     if (!parsed.social_media) parsed.social_media = {
-        instagram: '',
-        x: '',
-        facebook: '',
-        youtube: '',
-        linkedin: '',
-        threads: ''
+      instagram: 'https://instagram.com/yourprofile',
+      x: 'https://x.com/yourprofile',
+      facebook: 'https://facebook.com/yourprofile',
+      youtube: 'https://youtube.com/yourprofile',
+      linkedin: 'https://linkedin.com/yourprofile',
+      threads: 'https://threads.net/yourprofile'
     };
     return parsed;
   } catch (err) {
@@ -643,12 +643,12 @@ function readDB(): Database {
         ]
       },
       social_media: {
-        instagram: '',
-        x: '',
-        facebook: '',
-        youtube: '',
-        linkedin: '',
-        threads: ''
+        instagram: 'https://instagram.com/yourprofile',
+        x: 'https://x.com/yourprofile',
+        facebook: 'https://facebook.com/yourprofile',
+        youtube: 'https://youtube.com/yourprofile',
+        linkedin: 'https://linkedin.com/yourprofile',
+        threads: 'https://threads.net/yourprofile'
       }
     };
   }
