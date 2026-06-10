@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import { readDB, writeDB } from './server-db.js';
@@ -53,22 +53,16 @@ function getAllowedAdmins() {
 }
 
 // Lazily initialize Gemini SDK Client
-let aiClient: GoogleGenAI | null = null;
+// Lazily initialize Gemini SDK Client
+let aiClient: GoogleGenerativeAI | null = null;
 const API_KEY = process.env.GEMINI_API_KEY;
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(): GoogleGenerativeAI {
   if (!aiClient) {
     if (!API_KEY) {
       console.warn("⚠️ Warning: GEMINI_API_KEY is missing. AI Features will fall back to local responses.");
     }
-    aiClient = new GoogleGenAI({
-      apiKey: API_KEY || 'MOCK_KEY',
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build'
-        }
-      }
-    });
+    aiClient = new GoogleGenerativeAI(API_KEY || 'MOCK_KEY');
   }
   return aiClient;
 }
@@ -1798,7 +1792,6 @@ function defineRoutes() {
       const { action, params } = req.body;
       
       if (!API_KEY || API_KEY === 'MY_GEMINI_API_KEY') {
-        // Return a mock error or force trigger fallback locally
         return res.status(400).json({ error: 'Config missing, fallback enabled' });
       }
 
@@ -1819,21 +1812,29 @@ Your response must be in structured Markdown with distinct, beautiful chapters:
 ### 1. Ascendant (Lagna) & Core Personality
 Interpret their Ascendant sign and core traits.
 
-### 2. Planetary Placements & House Strengths
-Detail key planetary positions (such as Surya in 9th house, Chandra positioning, Jupiter in 11th). Keep it interesting and mystical yet psychological.
+### 2. The Sun & The Moon (Soul & Mind)
+What do their Sun and Moon placements reveal?
 
-### 3. Dasha Periods (Karmic Timeline)
-Generate a simulated Vimshottari Maha Dasha phase (e.g., Jupiter-Rahu or Saturn). Give specific transition timelines, gains, and cautious warning milestones.
+### 3. Career & Wealth (10th & 2nd/11th Houses)
+Destined career path and financial prosperity.
 
-### 4. Vedic Remedial Measures
-Provide 3 powerful, highly specific remedies (e.g., specific mantra counts like Shiva or Vishnu, temple charities, yellow sapphire or blue sapphire gemstones weights and wear guidelines).`;
+### 4. Relationships & Marriage (7th House)
+Love life and marital prospects.
 
-        const response = await client.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: prompt
+### 5. Dasha Overview (Current Time Period)
+What is the current planetary focus?
+
+### 6. Spiritual Remedies (Upayas)
+Provide practical Vedic remedies (Gemstones, Mantras, Donations) for their success.
+
+End with a warm, divine blessing. Keep formatting incredibly clean.`;
+
+        const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const response = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }]
         });
 
-        return res.json({ result: response.text });
+        return res.json({ result: response.response.text() });
       } 
       
       if (action === 'chat') {
@@ -1852,12 +1853,12 @@ User's current question: "${message}"
 
 Respond directly to their question in a mystical but practical way, with compassionate guidance, referencing transits, dasha and suggesting remedies where appropriate. Keep the output concise and encouraging.`;
 
-        const response = await client.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: prompt
+        const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const response = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }]
         });
 
-        return res.json({ result: response.text });
+        return res.json({ result: response.response.text() });
       }
 
       return res.status(400).json({ error: 'Unsupported API action' });
@@ -2181,17 +2182,19 @@ Offer comforting, detailed, and deeply empathetic answers. Try to structures rep
         const isKeyValid = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY';
         
         if (isKeyValid) {
-          const response = await client.models.generateContent({
-            model: 'gemini-3.5-flash',
+          const model = client.getGenerativeModel({ 
+            model: 'gemini-1.5-flash',
+            systemInstruction: sysInst
+          });
+          
+          const response = await model.generateContent({
             contents: messages.map(m => ({
               role: m.role === 'user' ? 'user' : 'model',
               parts: [{ text: m.content }]
-            })),
-            config: {
-              systemInstruction: sysInst
-            }
+            }))
           });
-          replyText = response.text || '';
+          
+          replyText = response.response.text() || '';
         } else {
           throw new Error("Key is mock or absent. Triggering high-fidelity local Vedic fallback.");
         }
