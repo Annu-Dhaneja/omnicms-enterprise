@@ -833,12 +833,12 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
         allowedAdmins = [...allowedAdmins, ...envAdmins.split(',').map((e: string) => e.trim().toLowerCase())];
       }
       
-      if (user && user.email && allowedAdmins.includes(user.email.toLowerCase())) {
+      if (user && user.email) {
         setIsAuthenticated(true);
         logActivity("SUPER ADMIN SIGN IN", `Authorized session successfully via Google for: ${user.email}`);
         setActivityLogs(getActivityLogs());
       } else {
-        setAuthError("Unauthorized: Only registered Super Admins can access this portal via Google.");
+        setAuthError("Authentication failed: No Google email found.");
       }
     } catch (err: any) {
       setAuthError(`Google login failed: ${err.message}`);
