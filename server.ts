@@ -837,6 +837,8 @@ const app = express();
 
 // Real-time SSE alert stream listeners
 let sseClients: any[] = [];
+const globalAdminOtpCache = new Map<string, { otp: string, otpExpires: string }>();
+const globalUserOtpCache = new Map<string, { otp: string, otpExpires: string }>();
 
 const emitNotification = (notification: any) => {
   sseClients.forEach(c => {
@@ -1647,6 +1649,7 @@ function defineRoutes() {
         email: email.toLowerCase(),
         otpExpires: expiry
       };
+      globalAdminOtpCache.set(email.toLowerCase(), { otp, otpExpires: expiry });
       writeDB(db);
 
       const htmlContent = `
@@ -1695,7 +1698,8 @@ function defineRoutes() {
         return res.status(403).json({ error: 'Unauthorized: Only registered Super Admins can access this portal.' });
       }
 
-      const adminOtpObj = db.admin_otp;
+      const cachedAdminOtp = globalAdminOtpCache.get(email.toLowerCase());
+      const adminOtpObj = db.admin_otp || (cachedAdminOtp ? { email: email.toLowerCase(), ...cachedAdminOtp } : undefined);
       
       const isValid = adminOtpObj && 
                       adminOtpObj.email.toLowerCase() === email.toLowerCase() && 
@@ -1710,6 +1714,7 @@ function defineRoutes() {
       if (db.admin_otp) {
         delete db.admin_otp;
       }
+      globalAdminOtpCache.delete(email.toLowerCase());
 
       // Log successful login
       if (!db.activity_logs) db.activity_logs = [];
@@ -1765,6 +1770,7 @@ function defineRoutes() {
         user.otp = otp;
         user.otpExpires = expiry;
       }
+      globalUserOtpCache.set(email.toLowerCase(), { otp, otpExpires: expiry });
 
       // Send OTP Mail
       const htmlContent = `
@@ -1825,7 +1831,9 @@ function defineRoutes() {
       }
 
       const user = db.users[userIdx];
-      const isOTPValid = user.otp === otp && new Date(user.otpExpires || '').getTime() > Date.now();
+      const cachedOtp = globalUserOtpCache.get(email.toLowerCase());
+      const isOTPValid = (user.otp === otp || (cachedOtp && cachedOtp.otp === otp)) && 
+                         new Date(user.otpExpires || (cachedOtp ? cachedOtp.otpExpires : '')).getTime() > Date.now();
 
       if (!isOTPValid) {
         return res.status(400).json({ error: 'Incorrect or expired OTP code.' });
@@ -1837,6 +1845,7 @@ function defineRoutes() {
       user.loginCount = (user.loginCount || 0) + 1;
       user.otp = undefined; // consume OTP
       user.otpExpires = undefined;
+      globalUserOtpCache.delete(email.toLowerCase());
 
       if (!db.activity_logs) db.activity_logs = [];
       db.activity_logs.unshift({
