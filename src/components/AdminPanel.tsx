@@ -1119,7 +1119,7 @@ ${urls.map(url => `  <url>
                     type="email" 
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="kanika9694@gmail.com" 
+                    placeholder="admin@example.com" 
                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
                     required
                   />
@@ -1207,7 +1207,7 @@ ${urls.map(url => `  <url>
           <div className="logo-emblem" style={{ width: '40px', height: '40px' }}>K</div>
           <div>
             <div className="font-serif text-lg font-bold text-[#C9A227] leading-none">Enterprise CMS Console</div>
-            <div className="text-[10px] text-[#596478] uppercase tracking-widest mt-1 font-bold">Admin: {email || "kanika9694@gmail.com"}</div>
+            <div className="text-[10px] text-[#596478] uppercase tracking-widest mt-1 font-bold">Admin: {email || "admin@example.com"}</div>
           </div>
         </div>
         <div className="flex items-center gap-3">

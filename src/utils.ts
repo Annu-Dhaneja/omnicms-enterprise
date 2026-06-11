@@ -696,15 +696,15 @@ export const getActivityLogs = (): ActivityLog[] => {
   }
 
   const seedLogs: ActivityLog[] = [
-    { id: "log_01", user: "kanika9694@gmail.com", action: "SEO METADATA UPDATE", details: "Optimized title tags and added structured schema markup for canonical URL.", timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString() },
-    { id: "log_02", user: "kanika9694@gmail.com", action: "THEME PALETTE CHANGED", details: "Changed complete theme profile from default to Cosmic Purple with 12px rounded borders.", timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
-    { id: "log_03", user: "kanika9694@gmail.com", action: "NEW HERO CONTENT", details: "Updated hero headline text from 'My Google AI Studio' to 'Acharya TN Khurana'.", timestamp: new Date(Date.now() - 1000 * 60 * 600).toISOString() }
+    { id: "log_01", user: "admin@example.com", action: "SEO METADATA UPDATE", details: "Optimized title tags and added structured schema markup for canonical URL.", timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString() },
+    { id: "log_02", user: "admin@example.com", action: "THEME PALETTE CHANGED", details: "Changed complete theme profile from default to Cosmic Purple with 12px rounded borders.", timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
+    { id: "log_03", user: "admin@example.com", action: "NEW HERO CONTENT", details: "Updated hero headline text from 'My Google AI Studio' to 'Acharya TN Khurana'.", timestamp: new Date(Date.now() - 1000 * 60 * 600).toISOString() }
   ];
   localStorage.setItem('acharya_khurana_activity_logs', JSON.stringify(seedLogs));
   return seedLogs;
 };
 
-export const logActivity = (action: string, details: string, user: string = "kanika9694@gmail.com"): void => {
+export const logActivity = (action: string, details: string, user: string = "admin@example.com"): void => {
   const logs = getActivityLogs();
   const nextLog: ActivityLog = {
     id: `log_${Date.now()}`,

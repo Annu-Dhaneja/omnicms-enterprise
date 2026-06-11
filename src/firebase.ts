@@ -103,7 +103,7 @@ export async function logInWithGoogle() {
     // Return mock logged-in user in mock mode
     const mockUser = {
       uid: "mock_super_admin_667",
-      email: "kanika9694@gmail.com",
+      email: "admin@example.com",
       displayName: "Seeker Admin",
       emailVerified: true,
       role: "Super Admin"
