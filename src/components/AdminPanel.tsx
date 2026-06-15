@@ -833,10 +833,12 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
         allowedAdmins = [...allowedAdmins, ...envAdmins.split(',').map((e: string) => e.trim().toLowerCase())];
       }
       
-      if (user && user.email) {
+      if (user && user.email && allowedAdmins.includes(user.email.toLowerCase())) {
         setIsAuthenticated(true);
         logActivity("SUPER ADMIN SIGN IN", `Authorized session successfully via Google for: ${user.email}`);
         setActivityLogs(getActivityLogs());
+      } else if (user && user.email) {
+        setAuthError(`Access denied: ${user.email} is not an authorized administrator.`);
       } else {
         setAuthError("Authentication failed: No Google email found.");
       }

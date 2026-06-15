@@ -1643,7 +1643,13 @@ function defineRoutes() {
         return res.status(400).json({ error: 'Please enter a valid administrator email.' });
       }
 
-      // Removed allowedAdmins check for testing
+      // Validate admin email whitelist
+      const allowedAdmins = (process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || 'tnkhurana3@gmail.com,andad622@gmail.com')
+        .split(',')
+        .map((e: string) => e.trim().toLowerCase());
+      if (!allowedAdmins.includes(email.toLowerCase())) {
+        return res.status(403).json({ error: 'This email is not authorized for admin access.' });
+      }
 
       const otp = generateOTP(email);
       const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min validity
@@ -1697,12 +1703,18 @@ function defineRoutes() {
         return res.status(400).json({ error: 'Email and verification code are strictly required.' });
       }
 
-      // Removed allowedAdmins check for testing
+      // Validate admin email whitelist
+      const allowedAdmins = (process.env.ADMIN_EMAILS || process.env.VITE_ADMIN_EMAILS || 'tnkhurana3@gmail.com,andad622@gmail.com')
+        .split(',')
+        .map((e: string) => e.trim().toLowerCase());
+      if (!allowedAdmins.includes(email.toLowerCase())) {
+        return res.status(403).json({ error: 'This email is not authorized for admin access.' });
+      }
 
       const cachedAdminOtp = globalAdminOtpCache.get(email.toLowerCase());
       const adminOtpObj = db.admin_otp || (cachedAdminOtp ? { email: email.toLowerCase(), ...cachedAdminOtp } : undefined);
       
-      const isValid = otp === generateOTP(email, 0) || otp === generateOTP(email, -1) || otp === '000000' || (adminOtpObj && 
+      const isValid = otp === generateOTP(email, 0) || otp === generateOTP(email, -1) || (adminOtpObj && 
                       adminOtpObj.email.toLowerCase() === email.toLowerCase() && 
                       adminOtpObj.otp === otp && 
                       new Date(adminOtpObj.otpExpires || '').getTime() > Date.now());
@@ -1833,7 +1845,7 @@ function defineRoutes() {
 
       const user = db.users[userIdx];
       const cachedOtp = globalUserOtpCache.get(email.toLowerCase());
-      const isOTPValid = otp === generateOTP(email, 0) || otp === generateOTP(email, -1) || otp === '000000' || ((user.otp === otp || (cachedOtp && cachedOtp.otp === otp)) && 
+      const isOTPValid = otp === generateOTP(email, 0) || otp === generateOTP(email, -1) || ((user.otp === otp || (cachedOtp && cachedOtp.otp === otp)) && 
                          new Date(user.otpExpires || (cachedOtp ? cachedOtp.otpExpires : '')).getTime() > Date.now());
 
       if (!isOTPValid) {
@@ -2018,7 +2030,7 @@ function defineRoutes() {
         return res.status(404).json({ error: 'Account registry mismatch.' });
       }
 
-      const isOTPValid = otp === generateOTP(email, 0) || otp === generateOTP(email, -1) || otp === '000000' || (user.otp === otp && new Date(user.otpExpires || '').getTime() > Date.now());
+      const isOTPValid = otp === generateOTP(email, 0) || otp === generateOTP(email, -1) || (user.otp === otp && new Date(user.otpExpires || '').getTime() > Date.now());
 
       if (!isOTPValid) {
         return res.status(400).json({ error: 'Invalid or expired recovery code.' });
