@@ -9,3 +9,5 @@ coverage/
 db.json
 
 .vercel
+push_env.cjs
+vercel-logs.txt

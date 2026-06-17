@@ -80,10 +80,7 @@ export default function Auth({ onAuthSuccess, onCancel }: AuthProps) {
       setError('Please input a valid email address.');
       return;
     }
-    if (smtpStatus && !smtpStatus.enabled) {
-      setError('Email service is currently unavailable.');
-      return;
-    }
+    // Allow OTP attempt even if status pre-check failed (can be unreliable on serverless)
     setError('');
     setInfo('');
     setLoading(true);
@@ -151,10 +148,7 @@ export default function Auth({ onAuthSuccess, onCancel }: AuthProps) {
       setError('Please complete all mandatory * fields.');
       return;
     }
-    if (smtpStatus && !smtpStatus.enabled) {
-      setError('Email service is currently unavailable.');
-      return;
-    }
+    // Allow registration attempt even if status pre-check failed (can be unreliable on serverless)
     setError('');
     setInfo('');
     setLoading(true);
@@ -229,10 +223,7 @@ export default function Auth({ onAuthSuccess, onCancel }: AuthProps) {
       setError('Email cannot be blank.');
       return;
     }
-    if (smtpStatus && !smtpStatus.enabled) {
-      setError('Email service is currently unavailable.');
-      return;
-    }
+    // Allow reset attempt even if status pre-check failed (can be unreliable on serverless)
     setError('');
     setInfo('');
     setLoading(true);
@@ -301,10 +292,7 @@ export default function Auth({ onAuthSuccess, onCancel }: AuthProps) {
     if (cooldown > 0) return;
     setError('');
     setInfo('');
-    if (smtpStatus && !smtpStatus.enabled) {
-      setError('Email service is currently unavailable.');
-      return;
-    }
+    // Allow resend attempt even if status pre-check failed (can be unreliable on serverless)
     setLoading(true);
 
     try {
@@ -383,8 +371,8 @@ export default function Auth({ onAuthSuccess, onCancel }: AuthProps) {
       ) : smtpStatus && (
         <div className="bg-white/[0.01] border border-white/5 rounded-xl px-3 py-2 flex items-center justify-between text-[10px]">
           <span className="text-[#596478]">Relay System:</span>
-          <span className={`font-mono font-bold uppercase transition-all ${smtpStatus.enabled ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {smtpStatus.enabled ? `📡 Live ${smtpStatus.provider}` : 'Email service is currently unavailable.'}
+          <span className={`font-mono font-bold uppercase transition-all ${smtpStatus.enabled ? 'text-emerald-400' : 'text-amber-400'}`}>
+            {smtpStatus.enabled ? `📡 Live ${smtpStatus.provider}` : '⚠️ Email relay may be slow'}
           </span>
         </div>
       )}
