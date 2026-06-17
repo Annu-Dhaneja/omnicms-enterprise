@@ -86,7 +86,7 @@ export default function Hero({ content, site, onOpenBooking, onNavigate }: HeroP
               📅 {content.cta1}
             </button>
             <button 
-              onClick={() => onNavigate('ai-features')} 
+              onClick={() => onNavigate('toolkit')} 
               className="px-8 py-4 rounded-full bg-white/5 border border-white/10 hover:border-[#C9A227] hover:text-[#C9A227] text-sm font-bold transition-all text-[#e8eaf0]"
             >
               🔮 {content.cta2}
