@@ -2,6 +2,7 @@
 
 
 import fs from 'fs';
+import crypto from 'crypto';
 interface Book {
   id: string;
   title: string;
@@ -1503,7 +1504,6 @@ function defineRoutes() {
   // ==========================================================
 
   // Generate 6 digit pin
-  const crypto = require('crypto');
   const generateOTP = (email: string, offset = 0) => {
     const windowSize = 10 * 60 * 1000;
     const currentWindow = Math.floor(Date.now() / windowSize) + offset;
