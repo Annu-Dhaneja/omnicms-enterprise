@@ -1138,21 +1138,7 @@ ${urls.map(url => `  <url>
                 {authLoading ? '📧 Sending Code...' : '🔗 Request OTP Code'}
               </button>
               
-              <div className="relative flex py-4 items-center">
-                <div className="flex-grow border-t border-white/10"></div>
-                <span className="flex-shrink-0 mx-4 text-xs text-[#596478]">Or continue with</span>
-                <div className="flex-grow border-t border-white/10"></div>
-              </div>
 
-              <button 
-                type="button" 
-                onClick={handleGoogleLogin}
-                disabled={authLoading}
-                className="w-full h-12 rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-sm shadow-md border border-slate-200 transition-all flex items-center justify-center gap-2"
-              >
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
-                Sign in with Google
-              </button>
             </form>
           ) : (
             <form onSubmit={handleVerifyOTP} className="space-y-4">
