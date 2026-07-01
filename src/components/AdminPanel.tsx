@@ -107,8 +107,29 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
   });
 
   useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      if (path.startsWith('/admin/')) {
+        const tab = path.replace('/admin/', '');
+        const validTabs = ['content', 'layout', 'theme', 'media', 'crm', 'blogs', 'seo', 'analytics', 'social_media', 'backups', 'books', 'ai_guru', 'toolkit', 'bookings', 'notifications', 'crm_dashboard', 'users', 'sound_settings', 'monitoring'];
+        if (validTabs.includes(tab)) {
+          setActiveTab(tab as any);
+        } else {
+          setActiveTab('crm_dashboard');
+        }
+      } else if (path === '/admin') {
+        setActiveTab('crm_dashboard');
+      }
+    };
+    
+    // Set initial URL if needed
     const newPath = activeTab === 'crm_dashboard' ? '/admin' : `/admin/${activeTab}`;
-    window.history.pushState({}, '', newPath);
+    if (window.location.pathname !== newPath) {
+      window.history.pushState({}, '', newPath);
+    }
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [activeTab]);
   // --- REAL-TIME & ADVANCED ASTRO SYSTEM STATES ---
   const [dbNotifications, setDbNotifications] = useState<any[]>([]);

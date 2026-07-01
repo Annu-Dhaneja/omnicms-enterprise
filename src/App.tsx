@@ -53,8 +53,38 @@ import ToolkitPage from './components/ToolkitPage';
 
 export default function App() {
   // Routing State
-  const [currentPage, setCurrentPage] = useState<PageId>('home');
+  const [currentPage, setCurrentPage] = useState<PageId>(() => {
+    const path = window.location.pathname.toLowerCase();
+    const validPages: PageId[] = ['home', 'about', 'services', 'books', 'blog', 'inquiry', 'cart', 'checkout', 'dashboard', 'contact', 'toolkit'];
+    const pathName = path.replace('/', '');
+    if (validPages.includes(pathName as PageId)) {
+      return pathName as PageId;
+    }
+    return 'home';
+  });
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      
+      // Handle admin panel popstate
+      if (path.startsWith('/admin')) {
+        setIsAdminOpen(true);
+      } else {
+        setIsAdminOpen(false);
+        const validPages: PageId[] = ['home', 'about', 'services', 'books', 'blog', 'inquiry', 'cart', 'checkout', 'dashboard', 'contact', 'toolkit'];
+        const pathName = path.replace('/', '');
+        if (validPages.includes(pathName as PageId)) {
+          setCurrentPage(pathName as PageId);
+        } else {
+          setCurrentPage('home');
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Administrative State
   const [cmsData, setCmsData] = useState<BackupData>(() => getCMSData());
@@ -400,6 +430,7 @@ export default function App() {
       setSelectedBookId(null);
     }
     setCurrentPage(page);
+    window.history.pushState({}, '', page === 'home' ? '/' : `/${page}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
