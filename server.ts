@@ -269,7 +269,12 @@ interface Database {
   };
 }
 
-const DB_FILE = path.join(process.cwd(), 'db.json');
+// ==========================================================
+// DB Helper Logic
+// ==========================================================
+const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
+const DB_FILE = isVercel ? '/tmp/db.json' : path.join(process.cwd(), 'db.json');
+let memoryDbFallback: Database | null = null;
 
 // Default seeds matching our high-fidelity frontend content
 const defaultBooks: Book[] = [
@@ -3005,8 +3010,9 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
       appType: 'spa'
     });
     app.use(vite.middlewares);
-    app.listen(3000, '0.0.0.0', () => {
-      console.log(`[SYS ADMIN] Full-stack Node server booted on port 3000`);
+    const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`[SYS ADMIN] Full-stack Node server booted on port ${port}`);
     });
   })().catch(err => {
     console.error("Critical server boot failure:", err);
@@ -3021,8 +3027,9 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   
   // If not running inside Vercel Serverless, start a regular port listener
   if (!process.env.VERCEL) {
-    app.listen(3000, '0.0.0.0', () => {
-      console.log(`[SYS ADMIN] Production Node server booted on port 3000`);
+    const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`[SYS ADMIN] Production Node server booted on port ${port}`);
     });
   }
 }

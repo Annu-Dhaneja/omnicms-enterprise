@@ -191,9 +191,9 @@ export default function App() {
 
       setCmsData(prev => ({
         ...prev,
-        books: resBooks,
-        coupons: resCoupons,
-        orders: resOrders
+        books: Array.isArray(resBooks) ? resBooks : prev.books,
+        coupons: Array.isArray(resCoupons) ? resCoupons : prev.coupons,
+        orders: Array.isArray(resOrders) ? resOrders : prev.orders
       }));
     } catch {
       console.warn("Unable to dynamically synchronize API backend catalogues, using fallback caches.");

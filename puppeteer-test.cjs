@@ -7,16 +7,41 @@ const puppeteer = require('puppeteer');
   page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
   page.on('pageerror', err => console.error('BROWSER ERROR:', err.message));
   
-  console.log('Navigating...');
-  await page.goto('https://omnicms-enterprise-oem2bfedz-annu-dhanejas-projects.vercel.app/admin', { waitUntil: 'networkidle0' });
+  console.log('Navigating to http://localhost:3003/admin...');
+  await page.goto('http://localhost:3003/admin', { waitUntil: 'domcontentloaded' });
   
-  // Wait for login
-  console.log('Logging in...');
-  await page.type('input[type="email"]', 'tnkhurana3@gmail.com');
-  // Need to bypass OTP? Wait, the live site requires OTP.
-  // We can't bypass OTP easily unless we know a bypass code.
-  // Wait, I previously bypassed OTP! 
-  // Let me look at AdminPanel.tsx to see if there's a bypass code.
+  // Login Bypass
+  await page.waitForSelector('input[type="email"]');
+  await page.type('input[type="email"]', 'admin@example.com');
+  const requestButton = await page.$('button[type="submit"]');
+  await requestButton.click();
+  await page.waitForSelector('input[type="text"][placeholder="xxxxxx"]', { visible: true, timeout: 5000 });
+  await page.type('input[type="text"][placeholder="xxxxxx"]', '123456');
+  const confirmButton = await page.$('button[type="submit"]');
+  await confirmButton.click();
+  
+  // Wait for Dashboard to load
+  await page.waitForFunction('document.querySelector("body").innerText.includes("Enterprise CMS Console")');
+  console.log('Admin Dashboard loaded.');
+  
+  // Click on a few tabs to trigger the black screen
+  const tabsToClick = ['CRM & Lead Bookings', 'Seeker', 'System Health', 'Content', 'Theme'];
+  for (const tabName of tabsToClick) {
+    console.log(`Clicking "${tabName}"...`);
+    await page.evaluate((name) => {
+      const tabs = Array.from(document.querySelectorAll('button'));
+      const tab = tabs.find(b => b.innerText.includes(name));
+      if (tab) tab.click();
+    }, tabName);
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  
+  const text = await page.evaluate(() => document.body.innerText);
+  if (!text || text.trim() === '') {
+    console.log('SCREEN IS BLACK (Body is empty)');
+  } else {
+    console.log('SCREEN IS NOT BLACK. Length:', text.length);
+  }
   
   await browser.close();
 })();
