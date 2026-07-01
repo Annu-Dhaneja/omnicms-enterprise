@@ -729,7 +729,10 @@ export default function App() {
         <AdminPanel 
           initialData={cmsData} 
           onSave={handleSaveCMS} 
-          onClose={() => setIsAdminOpen(false)} 
+          onClose={() => {
+            setIsAdminOpen(false);
+            window.history.pushState({}, '', '/');
+          }} 
         />
       )}
 

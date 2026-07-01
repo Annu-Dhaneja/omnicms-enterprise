@@ -96,8 +96,20 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'content' | 'layout' | 'theme' | 'media' | 'crm' | 'blogs' | 'seo' | 'analytics' | 'social_media' | 'backups' | 'books' | 'ai_guru' | 'toolkit' | 'bookings' | 'notifications' | 'crm_dashboard' | 'users' | 'sound_settings' | 'monitoring'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'layout' | 'theme' | 'media' | 'crm' | 'blogs' | 'seo' | 'analytics' | 'social_media' | 'backups' | 'books' | 'ai_guru' | 'toolkit' | 'bookings' | 'notifications' | 'crm_dashboard' | 'users' | 'sound_settings' | 'monitoring'>(() => {
+    const path = window.location.pathname.toLowerCase();
+    if (path.startsWith('/admin/')) {
+      const tab = path.replace('/admin/', '');
+      const validTabs = ['content', 'layout', 'theme', 'media', 'crm', 'blogs', 'seo', 'analytics', 'social_media', 'backups', 'books', 'ai_guru', 'toolkit', 'bookings', 'notifications', 'crm_dashboard', 'users', 'sound_settings', 'monitoring'];
+      if (validTabs.includes(tab)) return tab as any;
+    }
+    return 'crm_dashboard';
+  });
 
+  useEffect(() => {
+    const newPath = activeTab === 'crm_dashboard' ? '/admin' : `/admin/${activeTab}`;
+    window.history.pushState({}, '', newPath);
+  }, [activeTab]);
   // --- REAL-TIME & ADVANCED ASTRO SYSTEM STATES ---
   const [dbNotifications, setDbNotifications] = useState<any[]>([]);
   const [dbNotificationSettings, setDbNotificationSettings] = useState({ soundEnabled: true, volume: 0.8 });
@@ -3500,137 +3512,104 @@ ${urls.map(url => `  <url>
             </div>
           )}
 
-          {/* TAB 10: REAL-TIME CRM DASHBOARD */}
+          {/* TAB 10: REAL-TIME CRM DASHBOARD (SACRED LIVE SUITE LANDING) */}
           {activeTab === 'crm_dashboard' && (
-            <div className="space-y-6 max-w-5xl">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="font-serif text-2xl font-bold text-[#f5d98a] flex items-center gap-2">🔮 Real-Time CRM Analytics Console</h2>
-                  <p className="text-xs text-[#8b96aa] mt-0.5">Instant performance insights, outstanding inquiry counts, and customer transaction captures.</p>
-                </div>
-                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider font-mono">Stream Connected</span>
-                </div>
+            <div className="relative z-10 p-2 md:p-6 text-center max-w-5xl mx-auto font-outfit mt-4">
+              <div className="absolute inset-0 pointer-events-none z-[-1] opacity-5 mix-blend-overlay" style={{backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}}></div>
+              <div className="absolute inset-0 pointer-events-none z-[-1]" style={{background: 'radial-gradient(ellipse 900px 500px at 15% -5%, rgba(232,185,63,0.10), transparent 60%), radial-gradient(ellipse 700px 500px at 100% 10%, rgba(255,122,61,0.06), transparent 60%)'}}></div>
+              
+              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full border border-[var(--color-sls-line-strong)] bg-[rgba(232,185,63,0.06)] text-[12.5px] tracking-[0.06em] uppercase text-[var(--color-sls-gold)] mb-8">
+                <span className="relative w-[9px] h-[9px] rounded-full bg-[var(--color-sls-gold-bright)] shadow-[0_0_6px_2px_rgba(255,216,77,0.8),_0_0_18px_6px_rgba(232,185,63,0.35)] shrink-0 after:content-[''] after:absolute after:-inset-[6px] after:rounded-full after:border after:border-[rgba(255,216,77,0.5)] after:animate-[ripple_2.4s_ease-out_infinite]"></span>
+                Live Transmission Active
               </div>
 
-              {/* Aggregated Statistical Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-5 rounded-2xl bg-white/[0.02]/30 border border-white/5 space-y-1">
-                  <div className="text-[10px] text-[#596478] font-bold uppercase tracking-wider">Registered Seekers</div>
-                  <div className="text-3xl font-black text-[#f5d98a] font-mono">{billingSummary.usersCount || seekers.length || 0}</div>
-                  <div className="text-[10px] text-emerald-400 flex items-center gap-1">↑ Active clients portal</div>
-                </div>
-                <div className="p-5 rounded-2xl bg-white/[0.02]/30 border border-white/5 space-y-1">
-                  <div className="text-[10px] text-[#596478] font-bold uppercase tracking-wider">Consultation Sessions</div>
-                  <div className="text-3xl font-black text-sky-400 font-mono">{billingSummary.bookingsCount || dbBookings.length || 0}</div>
-                  <div className="text-[10px] text-sky-300">Sessions booked in system</div>
-                </div>
-                <div className="p-5 rounded-2xl bg-white/[0.02]/30 border border-white/5 space-y-1">
-                  <div className="text-[10px] text-[#596478] font-bold uppercase tracking-wider">Open Lead Inquiries</div>
-                  <div className="text-3xl font-black text-amber-400 font-mono">{billingSummary.inquiriesCount || leads.length || 0}</div>
-                  <div className="text-[10px] text-[#8b96aa]">Synchronized CRM prospects</div>
-                </div>
-                <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-1">
-                  <div className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Total Platform Billings</div>
-                  <div className="text-3xl font-black text-emerald-400 font-mono">₹{billingSummary.totalPayments || 0}</div>
-                  <div className="text-[10px] text-amber-300 font-medium">Real book sales + services</div>
-                </div>
+              <h1 className="font-cinzel font-semibold text-3xl md:text-5xl leading-[1.08] text-[var(--color-sls-ivory)]">
+                The Core of <span className="bg-gradient-to-r from-[var(--color-sls-gold)] via-[var(--color-sls-gold-bright)] to-[var(--color-sls-ember)] text-transparent bg-clip-text">Vedic Operations</span>
+              </h1>
+              
+              <p className="max-w-2xl mx-auto mt-6 text-sm md:text-base text-[var(--color-sls-muted)] font-light leading-relaxed">
+                Welcome to the Sacred Live Suite. From here you command all global consultations, AI telemetry, live seekers, and financial streams.
+              </p>
+
+              <div className="flex gap-4 justify-center mt-11 flex-wrap">
+                <button onClick={() => setActiveTab('bookings')} className="px-6 py-3 rounded-lg text-sm font-medium bg-gradient-to-br from-[var(--color-sls-gold-bright)] to-[var(--color-sls-gold)] text-[#1a1305] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_30px_rgba(255,216,77,0.35)] flex items-center gap-2">
+                  Launch Bookings Manager
+                </button>
+                <button onClick={() => setActiveTab('monitoring')} className="px-6 py-3 rounded-lg text-sm font-medium bg-transparent text-[var(--color-sls-ivory)] border border-[var(--color-sls-line-strong)] transition-all hover:border-[var(--color-sls-gold-bright)] hover:text-[var(--color-sls-gold-bright)] flex items-center gap-2">
+                  View Telemetry Logs
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Outstanding Billings / Quick Transaction Stream */}
-                <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0a0e18]/40 border border-white/5 space-y-4">
-                  <h3 className="text-sm font-bold text-[#e8eaf0] border-b border-white/5 pb-2">📜 Dynamic Financial Book Ledger</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-white/5 text-[#596478] uppercase text-[9px] tracking-wider">
-                          <th className="pb-3 font-semibold">User</th>
-                          <th className="pb-3 font-semibold">Classification</th>
-                          <th className="pb-3 font-semibold">Invoice Ref</th>
-                          <th className="pb-3 font-semibold text-right">Captured</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5 font-mono">
-                        {orders.map(order => (
-                          <tr key={order.id} className="hover:bg-white/[0.01]">
-                            <td className="py-3 font-sans">
-                              <div className="font-semibold text-white">{order.customerName}</div>
-                              <div className="text-[10px] text-[#596478]">{order.customerEmail}</div>
-                            </td>
-                            <td className="py-3"><span className="text-[10px] bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded">Store Purchase</span></td>
-                            <td className="py-3 text-[#f5d98a]">{order.invoiceNumber || order.id}</td>
-                            <td className="py-3 text-right text-emerald-400">₹{order.total}</td>
-                          </tr>
-                        ))}
-                        {dbBookings.filter(b => b.status === 'Confirmed' || b.status === 'Completed').map(booking => (
-                          <tr key={booking.id} className="hover:bg-white/[0.01]">
-                            <td className="py-3 font-sans">
-                              <div className="font-semibold text-white">{booking.customerName}</div>
-                              <div className="text-[10px] text-[#596478]">{booking.customerEmail}</div>
-                            </td>
-                            <td className="py-3"><span className="text-[10px] bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded">Consultation</span></td>
-                            <td className="py-3 text-white">{booking.id}</td>
-                            <td className="py-3 text-right text-emerald-400">₹{booking.price || 499}</td>
-                          </tr>
-                        ))}
-                        {orders.length === 0 && dbBookings.length === 0 && (
-                          <tr>
-                            <td colSpan={4} className="py-8 text-center text-[#596478]">No transaction records found in the general ledger.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Quick Diagnostics Controls */}
-                <div className="p-6 rounded-2xl bg-[#0a0e18]/40 border border-white/5 space-y-4">
-                  <h3 className="text-sm font-bold text-[#e8eaf0] border-b border-white/5 pb-2">⚡ Sound Testing & Alarms</h3>
-                  <p className="text-[11px] text-[#8b96aa] leading-relaxed">Ensure administrative sound cards are functioning correctly by initiating live, synthetic test broadcasts using the controls below.</p>
+              {/* Live Preview Panel */}
+              <div className="mt-16 text-left">
+                <div className="bg-gradient-to-b from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] rounded-[18px] p-7 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.7),_inset_0_1px_0_rgba(255,255,255,0.02)]">
                   
-                  <div className="space-y-2 pt-2">
-                    <button 
-                      onClick={() => {
-                        fetch('/api/admin/notifications/test-trigger', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ type: 'Booking' })
-                        });
-                      }}
-                      className="w-full text-left p-3 rounded-xl bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 text-xs font-semibold text-emerald-400 flex items-center justify-between"
-                    >
-                      <span>🛎️ Test Booking Notification</span>
-                      <span className="text-[10px] uppercase font-mono font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">Fire</span>
-                    </button>
-                    <button 
-                      onClick={() => {
-                        fetch('/api/admin/notifications/test-trigger', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ type: 'Order' })
-                        });
-                      }}
-                      className="w-full text-left p-3 rounded-xl bg-amber-500/5 hover:bg-amber-500/10 border border-amber-500/10 text-xs font-semibold text-amber-400 flex items-center justify-between"
-                    >
-                      <span>🛍️ Test Order Notification</span>
-                      <span className="text-[10px] uppercase font-mono font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">Fire</span>
-                    </button>
-                    <button 
-                      onClick={() => {
-                        fetch('/api/admin/notifications/test-trigger', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ type: 'New User' })
-                        });
-                      }}
-                      className="w-full text-left p-3 rounded-xl bg-purple-500/5 hover:bg-purple-500/10 border border-purple-500/10 text-xs font-semibold text-purple-300 flex items-center justify-between"
-                    >
-                      <span>👤 Test Seeker Join Notification</span>
-                      <span className="text-[10px] uppercase font-mono font-bold bg-purple-500/10 px-1.5 py-0.5 rounded">Fire</span>
-                    </button>
+                  <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="text-[13px] tracking-[0.05em] uppercase text-[var(--color-sls-muted)] font-bold">Live Overview</div>
+                    </div>
+                    <div className="text-[11.5px] text-[var(--color-sls-muted)] flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Real-time sync
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+                    <div className="border border-[var(--color-sls-line)] rounded-xl p-4 bg-white/[0.012]">
+                      <div className="text-[10px] text-[var(--color-sls-muted)] uppercase tracking-[0.05em] mb-2.5 font-bold">Registered Seekers</div>
+                      <div className="font-mono text-2xl text-[var(--color-sls-gold-bright)] font-medium">{billingSummary.usersCount || seekers.length || 0}</div>
+                      <div className="text-[11px] text-[#7BC98E] mt-1.5">+ active in portal</div>
+                    </div>
+                    <div className="border border-[var(--color-sls-line)] rounded-xl p-4 bg-white/[0.012]">
+                      <div className="text-[10px] text-[var(--color-sls-muted)] uppercase tracking-[0.05em] mb-2.5 font-bold">Consultations</div>
+                      <div className="font-mono text-2xl text-[var(--color-sls-gold-bright)] font-medium">{billingSummary.bookingsCount || dbBookings.length || 0}</div>
+                      <div className="text-[11px] text-[var(--color-sls-muted)] mt-1.5">Scheduled sessions</div>
+                    </div>
+                    <div className="border border-[var(--color-sls-line)] rounded-xl p-4 bg-white/[0.012]">
+                      <div className="text-[10px] text-[var(--color-sls-muted)] uppercase tracking-[0.05em] mb-2.5 font-bold">Open Inquiries</div>
+                      <div className="font-mono text-2xl text-[var(--color-sls-gold-bright)] font-medium">{billingSummary.inquiriesCount || leads.length || 0}</div>
+                      <div className="text-[11px] text-[#7BC98E] mt-1.5">Awaiting response</div>
+                    </div>
+                    <div className="border border-[var(--color-sls-line)] rounded-xl p-4 bg-white/[0.012]">
+                      <div className="text-[10px] text-[var(--color-sls-muted)] uppercase tracking-[0.05em] mb-2.5 font-bold">Platform Billings</div>
+                      <div className="font-mono text-2xl text-[var(--color-sls-gold-bright)] font-medium">₹{billingSummary.totalPayments || 0}</div>
+                      <div className="text-[11px] text-[#7BC98E] mt-1.5">Total processed</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modules Bento */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mt-8 text-left">
+                <div onClick={() => setActiveTab('bookings')} className="md:col-span-6 cursor-pointer border border-[var(--color-sls-line)] rounded-2xl p-6 bg-gradient-to-br from-white/[0.015] to-transparent transition-all hover:border-[var(--color-sls-line-strong)] hover:-translate-y-[3px] hover:shadow-[0_20px_50px_-25px_rgba(232,185,63,0.25)] relative overflow-hidden group">
+                  <div className="w-10 h-10 rounded-lg mb-4 flex items-center justify-center border border-[var(--color-sls-line-strong)] text-[var(--color-sls-gold-bright)] bg-[rgba(232,185,63,0.06)] text-xl">📅</div>
+                  <h3 className="text-base font-semibold text-[var(--color-sls-ivory)] mb-2">Bookings Manager</h3>
+                  <p className="text-xs text-[var(--color-sls-muted)] leading-relaxed font-light">Calendar view, manual overrides, and schedule management for Kundli and Vastu sessions.</p>
+                  <div className="inline-block mt-4 text-[10px] tracking-[0.05em] text-[var(--color-sls-gold)] uppercase font-mono group-hover:underline">Launch Module →</div>
+                </div>
+                
+                <div onClick={() => setActiveTab('ai_guru')} className="md:col-span-6 cursor-pointer border border-[var(--color-sls-line)] rounded-2xl p-6 bg-gradient-to-br from-white/[0.015] to-transparent transition-all hover:border-[var(--color-sls-line-strong)] hover:-translate-y-[3px] hover:shadow-[0_20px_50px_-25px_rgba(232,185,63,0.25)] relative overflow-hidden group">
+                  <div className="w-10 h-10 rounded-lg mb-4 flex items-center justify-center border border-[var(--color-sls-line-strong)] text-[var(--color-sls-gold-bright)] bg-[rgba(232,185,63,0.06)] text-xl">🧠</div>
+                  <h3 className="text-base font-semibold text-[var(--color-sls-ivory)] mb-2">AI Guru Settings</h3>
+                  <p className="text-xs text-[var(--color-sls-muted)] leading-relaxed font-light">Configure Gemini and Claude behavior, personality, temperature, and system prompts.</p>
+                  <div className="inline-block mt-4 text-[10px] tracking-[0.05em] text-[var(--color-sls-gold)] uppercase font-mono group-hover:underline">Launch Module →</div>
+                </div>
+
+                <div onClick={() => setActiveTab('toolkit')} className="md:col-span-4 cursor-pointer border border-[var(--color-sls-line)] rounded-2xl p-6 bg-gradient-to-br from-white/[0.015] to-transparent transition-all hover:border-[var(--color-sls-line-strong)] hover:-translate-y-[3px] hover:shadow-[0_20px_50px_-25px_rgba(232,185,63,0.25)] relative overflow-hidden group">
+                  <div className="w-10 h-10 rounded-lg mb-4 flex items-center justify-center border border-[var(--color-sls-line-strong)] text-[var(--color-sls-gold-bright)] bg-[rgba(232,185,63,0.06)] text-xl">⚙️</div>
+                  <h3 className="text-base font-semibold text-[var(--color-sls-ivory)] mb-2">Vedic Tool Manager</h3>
+                  <p className="text-xs text-[var(--color-sls-muted)] leading-relaxed font-light">Add, edit, and organize Kundli, Numerology, and Matchmaking digital products.</p>
+                </div>
+                
+                <div onClick={() => setActiveTab('notifications')} className="md:col-span-4 cursor-pointer border border-[var(--color-sls-line)] rounded-2xl p-6 bg-gradient-to-br from-white/[0.015] to-transparent transition-all hover:border-[var(--color-sls-line-strong)] hover:-translate-y-[3px] hover:shadow-[0_20px_50px_-25px_rgba(232,185,63,0.25)] relative overflow-hidden group">
+                  <div className="w-10 h-10 rounded-lg mb-4 flex items-center justify-center border border-[var(--color-sls-line-strong)] text-[var(--color-sls-gold-bright)] bg-[rgba(232,185,63,0.06)] text-xl">🔊</div>
+                  <h3 className="text-base font-semibold text-[var(--color-sls-ivory)] mb-2">Sound Alerts</h3>
+                  <p className="text-xs text-[var(--color-sls-muted)] leading-relaxed font-light">Configure audio notifications, volumes, and custom chimes for incoming events.</p>
+                </div>
+
+                <div onClick={() => setActiveTab('users')} className="md:col-span-4 cursor-pointer border border-[var(--color-sls-line)] rounded-2xl p-6 bg-gradient-to-br from-white/[0.015] to-transparent transition-all hover:border-[var(--color-sls-line-strong)] hover:-translate-y-[3px] hover:shadow-[0_20px_50px_-25px_rgba(232,185,63,0.25)] relative overflow-hidden group">
+                  <div className="w-10 h-10 rounded-lg mb-4 flex items-center justify-center border border-[var(--color-sls-line-strong)] text-[var(--color-sls-gold-bright)] bg-[rgba(232,185,63,0.06)] text-xl">👥</div>
+                  <h3 className="text-base font-semibold text-[var(--color-sls-ivory)] mb-2">Registrants</h3>
+                  <p className="text-xs text-[var(--color-sls-muted)] leading-relaxed font-light">View all registered seekers, access logs, verification status, and channels.</p>
                 </div>
               </div>
             </div>
@@ -3648,26 +3627,14 @@ ${urls.map(url => `  <url>
                   body: JSON.stringify(newBooking)
                 });
                 if (res.ok) {
-                  alert('✨ Booking registered successfully inside client database & CRM synchronization dispatched!');
+                  setNewBooking({
+                    customerName: '', customerEmail: '', customerPhone: '',
+                    type: 'Career', serviceName: 'Kundli Guna Milan & Kundli Reading',
+                    date: new Date().toISOString().split('T')[0], time: '11:00 AM', price: 499,
+                    birthDate: '', birthTime: '', birthPlace: ''
+                  });
                   setShowCreateForm(false);
                   fetchBillingSummaryAndMore();
-                  // Reset form fields
-                  setNewBooking({
-                    customerName: '',
-                    customerEmail: '',
-                    customerPhone: '',
-                    type: 'Career',
-                    serviceName: 'Kundli Guna Milan & Kundli Reading',
-                    date: new Date().toISOString().split('T')[0],
-                    time: '11:00 AM',
-                    price: 499,
-                    birthDate: '',
-                    birthTime: '',
-                    birthPlace: ''
-                  });
-                } else {
-                  const errJson = await res.json();
-                  alert(`❌ Failed to record booking: ${errJson.error}`);
                 }
               } catch (err: any) {
                 alert(`❌ Server Connection error: ${err.message}`);
@@ -3690,209 +3657,182 @@ ${urls.map(url => `  <url>
             };
 
             const deleteBooking = async (id: string) => {
-              if (!confirm('⚠️ Are you sure you design to delete this session? This action cannot be reverted!')) return;
+              if (!confirm('⚠️ Are you sure you desire to delete this session? This action cannot be reverted!')) return;
               try {
-                const res = await fetch(`/api/admin/bookings/${id}`, {
-                  method: 'DELETE'
-                });
-                if (res.ok) {
-                  fetchBillingSummaryAndMore();
-                }
-              } catch (e) {
-                console.error(e);
-              }
+                const res = await fetch(`/api/admin/bookings/${id}`, { method: 'DELETE' });
+                if (res.ok) { fetchBillingSummaryAndMore(); }
+              } catch (e) { console.error(e); }
             };
 
             return (
-              <div className="space-y-6 max-w-5xl">
-                <div className="flex justify-between items-center">
+              <div className="space-y-6 max-w-6xl mx-auto font-outfit text-left">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-sls-line)] pb-4">
                   <div>
-                    <h2 className="font-serif text-2xl font-bold text-[#f5d98a]">Session Bookings Scheduler</h2>
-                    <p className="text-xs text-[#8b96aa] mt-0.5">Approve celestial consultation schedules, register cold prospects verbally, and synchronize birth charts.</p>
+                    <h2 className="font-cinzel text-xl text-[var(--color-sls-gold)] font-medium">Bookings Manager</h2>
+                    <p className="text-[13px] text-[var(--color-sls-muted)] mt-1">Review, approve, and organize astrological consultation schedules.</p>
                   </div>
-                  <button 
-                    onClick={() => setShowCreateForm(!showCreateForm)}
-                    className="btn btn-gold btn-sm flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" /> {showCreateForm ? 'Cancel Creation' : 'Book Verbal Session'}
-                  </button>
+                  <div className="flex gap-2.5">
+                    <button className="px-4 py-2 border border-[var(--color-sls-line-strong)] rounded-lg text-[13px] text-[var(--color-sls-ivory)] hover:border-[var(--color-sls-gold-bright)] hover:text-[var(--color-sls-gold-bright)] flex items-center gap-2">
+                      <span className="font-mono text-[var(--color-sls-gold)]">📅</span> View Calendar
+                    </button>
+                    <button onClick={() => setShowCreateForm(true)} className="px-4 py-2 bg-[var(--color-sls-gold)] text-[#1a1305] rounded-lg text-[13px] font-medium hover:bg-[var(--color-sls-gold-bright)] shadow-[0_4px_16px_rgba(201,162,39,0.3)]">
+                      + Add Booking
+                    </button>
+                  </div>
                 </div>
 
-                {showCreateForm && (
-                  <form onSubmit={handleCreateManualBooking} className="p-6 rounded-2xl bg-white/[0.02]/40 border border-white/5 space-y-4 max-w-3xl">
-                    <h3 className="text-sm font-semibold text-[#f5d98a] border-b border-white/5 pb-2">📝 Complete Manual Astro Consultation Parameters</h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-[#8b96aa] font-bold block">Seeker Name *</label>
-                        <input 
-                          type="text" 
-                          required
-                          value={newBooking.customerName}
-                          onChange={e => setNewBooking({ ...newBooking, customerName: e.target.value })}
-                          className="form-input text-xs" 
-                          placeholder="e.g. Ramesh Chandra" 
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-[#8b96aa] font-bold block">Seeker Email *</label>
-                        <input 
-                          type="email" 
-                          required
-                          value={newBooking.customerEmail}
-                          onChange={e => setNewBooking({ ...newBooking, customerEmail: e.target.value })}
-                          className="form-input text-xs" 
-                          placeholder="e.g. ramesh@gmail.com" 
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-[#8b96aa] font-bold block">Seeker Phone *</label>
-                        <input 
-                          type="text" 
-                          required
-                          value={newBooking.customerPhone}
-                          onChange={e => setNewBooking({ ...newBooking, customerPhone: e.target.value })}
-                          className="form-input text-xs" 
-                          placeholder="e.g. +9198751515" 
-                        />
-                      </div>
-                    </div>
+                <div className="bg-gradient-to-b from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                  <div className="flex items-center gap-3 p-4 border-b border-[var(--color-sls-line)]">
+                    <input type="text" placeholder="Search by name, email or code..." className="bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-4 py-2 text-[13px] w-full max-w-xs focus:border-[var(--color-sls-gold)] focus:outline-none placeholder:text-[var(--color-sls-muted)]" />
+                    <select className="bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-2 text-[13px] text-[var(--color-sls-muted)] focus:outline-none">
+                      <option value="all">All Statuses</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-[#8b96aa] font-bold block">Consultation Genre</label>
-                        <select 
-                          value={newBooking.type}
-                          onChange={e => setNewBooking({ ...newBooking, type: e.target.value })}
-                          className="form-input text-xs bg-[#0b0e1b]"
-                        >
-                          <option value="Marriage">💍 Marriage / Guna Milan</option>
-                          <option value="Career">💼 Career & Job Alignment</option>
-                          <option value="Business">💰 Commercial Business Wealth</option>
-                          <option value="Spiritual">🧘 Spiritual Guidance</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-[#8b96aa] font-bold block">Astrology Package</label>
-                        <input 
-                          type="text" 
-                          value={newBooking.serviceName}
-                          onChange={e => setNewBooking({ ...newBooking, serviceName: e.target.value })}
-                          className="form-input text-xs" 
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-[#8b96aa] font-bold block">Consultation Date</label>
-                        <input 
-                          type="date" 
-                          value={newBooking.date}
-                          onChange={e => setNewBooking({ ...newBooking, date: e.target.value })}
-                          className="form-input text-xs" 
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-[#8b96aa] font-bold block">Preferred Hourly Slot</label>
-                        <input 
-                          type="text" 
-                          value={newBooking.time}
-                          onChange={e => setNewBooking({ ...newBooking, time: e.target.value })}
-                          className="form-input text-xs" 
-                          placeholder="e.g. 11:30 AM"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 space-y-3">
-                      <h4 className="text-xs font-bold text-[#f5d98a]">✨ Natal Birth Matrix (For Planetary Computations)</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-amber-200">Date of Birth</label>
-                          <input 
-                            type="date" 
-                            value={newBooking.birthDate}
-                            onChange={e => setNewBooking({ ...newBooking, birthDate: e.target.value })}
-                            className="form-input text-xs bg-[#0b0e1b] border-amber-500/20" 
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-amber-200">Exact Time of Birth</label>
-                          <input 
-                            type="text" 
-                            placeholder="e.g. 14:35 or 02:35 PM"
-                            value={newBooking.birthTime}
-                            onChange={e => setNewBooking({ ...newBooking, birthTime: e.target.value })}
-                            className="form-input text-xs bg-[#0b0e1b] border-amber-500/20" 
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-amber-200">Place of Birth (City / Region)</label>
-                          <input 
-                            type="text" 
-                            placeholder="e.g. Delhi, India"
-                            value={newBooking.birthPlace}
-                            onChange={e => setNewBooking({ ...newBooking, birthPlace: e.target.value })}
-                            className="form-input text-xs bg-[#0b0e1b] border-amber-500/20" 
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <button type="submit" className="btn btn-gold btn-sm h-10 w-full font-bold">✨ Commit verbal booking record</button>
-                  </form>
-                )}
-
-                {/* Booked Sessions Grid */}
-                <div className="p-6 rounded-2xl bg-[#0a0e18]/40 border border-white/5 space-y-4">
-                  <h3 className="text-sm font-bold text-white">📅 Astrological Consultations Database</h3>
-                  <div className="divide-y divide-white/5 space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                    {dbBookings.map(b => (
-                      <div key={b.id} className="pt-4 first:pt-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-serif text-sm font-bold text-[#f5d98a]">{b.customerName}</h4>
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                              b.status === 'Confirmed' ? 'bg-emerald-500/15 text-emerald-400' :
-                              b.status === 'Completed' ? 'bg-sky-500/15 text-sky-400' :
-                              b.status === 'Cancelled' ? 'bg-rose-500/15 text-rose-400' : 'bg-amber-500/15 text-amber-400'
+                  <div className="overflow-x-auto hidden md:block">
+                    <table className="w-full text-left">
+                      <thead className="bg-[rgba(232,185,63,0.02)] border-b border-[var(--color-sls-line)]">
+                        <tr>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium">Booking Code</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium">Customer Details</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium">Service / Date</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium">Status</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--color-sls-line)]">
+                        {dbBookings.map(b => (
+                          <tr key={b.id} className="hover:bg-[rgba(232,185,63,0.03)] transition-colors">
+                            <td className="px-5 py-4 align-middle">
+                              <span className="text-[var(--color-sls-gold)] font-mono text-[12px]">{b.id.substring(0, 8).toUpperCase()}</span>
+                            </td>
+                            <td className="px-5 py-4 align-middle">
+                              <div className="font-medium text-[var(--color-sls-ivory)]">{b.customerName}</div>
+                              <div className="text-[12px] text-[var(--color-sls-muted)] mt-1">{b.customerEmail} • {b.customerPhone}</div>
+                            </td>
+                            <td className="px-5 py-4 align-middle">
+                              <div className="text-[13.5px] text-[var(--color-sls-ivory)]">{b.type} Consultation</div>
+                              <div className="text-[12px] text-[var(--color-sls-muted)] mt-1">{b.date} • {b.time}</div>
+                            </td>
+                            <td className="px-5 py-4 align-middle">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11.5px] font-medium before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current ${
+                                b.status === 'Confirmed' ? 'text-[#5EC8E8] bg-[rgba(94,200,232,0.12)]' :
+                                b.status === 'Completed' ? 'text-[#7BC98E] bg-[rgba(123,201,142,0.12)]' :
+                                b.status === 'Cancelled' ? 'text-[#FF6B6B] bg-[rgba(255,107,107,0.12)]' : 
+                                'text-[var(--color-sls-gold-bright)] bg-[rgba(232,185,63,0.12)]'
+                              }`}>
+                                {b.status}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4 align-middle text-right">
+                              <div className="flex gap-2 justify-end">
+                                {b.status === 'Pending' && <button onClick={() => changeStatus(b.id, 'Confirmed')} className="w-8 h-8 rounded-md border border-[var(--color-sls-line)] text-[var(--color-sls-muted)] hover:border-[#5EC8E8] hover:text-[#5EC8E8] flex items-center justify-center transition-colors" title="Confirm">✓</button>}
+                                {b.status === 'Confirmed' && <button onClick={() => changeStatus(b.id, 'Completed')} className="w-8 h-8 rounded-md border border-[var(--color-sls-line)] text-[var(--color-sls-muted)] hover:border-[#7BC98E] hover:text-[#7BC98E] flex items-center justify-center transition-colors" title="Complete">✔</button>}
+                                {b.status !== 'Cancelled' && <button onClick={() => changeStatus(b.id, 'Cancelled')} className="w-8 h-8 rounded-md border border-[var(--color-sls-line)] text-[var(--color-sls-muted)] hover:border-[#FF6B6B] hover:text-[#FF6B6B] flex items-center justify-center transition-colors" title="Cancel">✕</button>}
+                                <button onClick={() => deleteBooking(b.id)} className="w-8 h-8 rounded-md border border-[var(--color-sls-line)] text-[var(--color-sls-muted)] hover:border-[var(--color-sls-gold-bright)] hover:text-[var(--color-sls-gold-bright)] flex items-center justify-center transition-colors" title="Delete">🗑</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {dbBookings.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="py-16 text-center text-[var(--color-sls-muted)]">
+                              <div className="text-[34px] text-[var(--color-sls-gold)] mb-3">📅</div>
+                              <h3 className="text-[var(--color-sls-ivory)] font-medium font-cinzel text-lg mb-2">No Bookings Yet</h3>
+                              <p className="text-sm">There are no consultations scheduled in the calendar.</p>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Mobile view cards */}
+                  <div className="md:hidden block">
+                     {dbBookings.map(b => (
+                        <div key={b.id} className="p-4 border-b border-[var(--color-sls-line)] last:border-b-0">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="text-[var(--color-sls-gold)] font-mono text-[12px]">{b.id.substring(0, 8).toUpperCase()}</span>
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current ${
+                              b.status === 'Confirmed' ? 'text-[#5EC8E8] bg-[rgba(94,200,232,0.12)]' :
+                              b.status === 'Completed' ? 'text-[#7BC98E] bg-[rgba(123,201,142,0.12)]' :
+                              b.status === 'Cancelled' ? 'text-[#FF6B6B] bg-[rgba(255,107,107,0.12)]' : 
+                              'text-[var(--color-sls-gold-bright)] bg-[rgba(232,185,63,0.12)]'
                             }`}>{b.status}</span>
                           </div>
-                          <p className="text-xs text-[#8b96aa]">{b.customerEmail} | Phone: {b.customerPhone}</p>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#596478]">
-                            <span>🌌 Genre: <strong className="text-white">{b.type}</strong></span>
-                            <span>📅 Date: <strong className="text-white">{b.date}</strong></span>
-                            <span>⏰ Slot: <strong className="text-white">{b.time}</strong></span>
-                            {b.birthPlace && <span>🗺️ Born: <strong className="text-amber-300">{b.birthPlace} ({b.birthDate})</strong></span>}
+                          <div className="font-medium text-[var(--color-sls-ivory)]">{b.customerName}</div>
+                          <div className="text-[12px] text-[var(--color-sls-muted)]">{b.type} Consultation • {b.date} at {b.time}</div>
+                          <div className="flex gap-2 mt-3">
+                            {b.status === 'Pending' && <button onClick={() => changeStatus(b.id, 'Confirmed')} className="w-8 h-8 rounded-md border border-[var(--color-sls-line)] text-[var(--color-sls-muted)] flex items-center justify-center">✓</button>}
+                            <button onClick={() => deleteBooking(b.id)} className="w-8 h-8 rounded-md border border-[var(--color-sls-line)] text-[var(--color-sls-muted)] flex items-center justify-center">🗑</button>
+                          </div>
+                        </div>
+                     ))}
+                  </div>
+                </div>
+
+                {/* Add Booking Modal Overlay */}
+                {showCreateForm && (
+                  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-gradient-to-b from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line-strong)] rounded-2xl w-full max-w-2xl p-6 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
+                      <div className="flex justify-between items-center mb-5">
+                        <h3 className="font-cinzel text-lg text-[var(--color-sls-ivory)]">Create Manual Booking</h3>
+                        <button onClick={() => setShowCreateForm(false)} className="w-8 h-8 rounded-lg border border-[var(--color-sls-line)] text-[var(--color-sls-muted)] hover:text-[var(--color-sls-gold-bright)] hover:border-[var(--color-sls-gold-bright)]">✕</button>
+                      </div>
+                      
+                      <form onSubmit={handleCreateManualBooking}>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="col-span-2 md:col-span-1">
+                            <label className="block text-[12px] text-[var(--color-sls-muted)] uppercase tracking-[0.04em] mb-1.5">Seeker Name *</label>
+                            <input required type="text" value={newBooking.customerName} onChange={e => setNewBooking({ ...newBooking, customerName: e.target.value })} className="w-full bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-2 text-[13.5px] focus:border-[var(--color-sls-gold)] focus:outline-none" />
+                          </div>
+                          <div className="col-span-2 md:col-span-1">
+                            <label className="block text-[12px] text-[var(--color-sls-muted)] uppercase tracking-[0.04em] mb-1.5">Email Address *</label>
+                            <input required type="email" value={newBooking.customerEmail} onChange={e => setNewBooking({ ...newBooking, customerEmail: e.target.value })} className="w-full bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-2 text-[13.5px] focus:border-[var(--color-sls-gold)] focus:outline-none" />
+                          </div>
+                          <div className="col-span-2 md:col-span-1">
+                            <label className="block text-[12px] text-[var(--color-sls-muted)] uppercase tracking-[0.04em] mb-1.5">Phone Number</label>
+                            <input required type="text" value={newBooking.customerPhone} onChange={e => setNewBooking({ ...newBooking, customerPhone: e.target.value })} className="w-full bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-2 text-[13.5px] focus:border-[var(--color-sls-gold)] focus:outline-none" />
+                          </div>
+                          <div className="col-span-2 md:col-span-1">
+                            <label className="block text-[12px] text-[var(--color-sls-muted)] uppercase tracking-[0.04em] mb-1.5">Consultation Type</label>
+                            <select value={newBooking.type} onChange={e => setNewBooking({ ...newBooking, type: e.target.value })} className="w-full bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-2 text-[13.5px] focus:border-[var(--color-sls-gold)] focus:outline-none text-[var(--color-sls-ivory)]">
+                              <option value="Marriage">Marriage / Guna Milan</option>
+                              <option value="Career">Career & Job Alignment</option>
+                              <option value="Business">Commercial Business</option>
+                              <option value="Spiritual">Spiritual Guidance</option>
+                            </select>
+                          </div>
+                          <div className="col-span-2 md:col-span-1">
+                            <label className="block text-[12px] text-[var(--color-sls-muted)] uppercase tracking-[0.04em] mb-1.5">Date</label>
+                            <input required type="date" value={newBooking.date} onChange={e => setNewBooking({ ...newBooking, date: e.target.value })} className="w-full bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-2 text-[13.5px] focus:border-[var(--color-sls-gold)] focus:outline-none text-[var(--color-sls-ivory)]" />
+                          </div>
+                          <div className="col-span-2 md:col-span-1">
+                            <label className="block text-[12px] text-[var(--color-sls-muted)] uppercase tracking-[0.04em] mb-1.5">Time Slot</label>
+                            <input required type="text" placeholder="e.g. 11:30 AM" value={newBooking.time} onChange={e => setNewBooking({ ...newBooking, time: e.target.value })} className="w-full bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-2 text-[13.5px] focus:border-[var(--color-sls-gold)] focus:outline-none" />
                           </div>
                         </div>
 
-                        {/* Status update CTA buttons */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {b.status === 'Pending' && (
-                            <button onClick={() => changeStatus(b.id, 'Confirmed')} className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-1">
-                              <Check className="w-3.5 h-3.5" /> Approve
-                            </button>
-                          )}
-                          {b.status === 'Confirmed' && (
-                            <button onClick={() => changeStatus(b.id, 'Completed')} className="p-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-450 text-xs font-semibold flex items-center gap-1">
-                              ✓ Set Complete
-                            </button>
-                          )}
-                          {b.status !== 'Cancelled' && (
-                            <button onClick={() => changeStatus(b.id, 'Cancelled')} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-rose-400 text-xs">
-                              Cancel
-                            </button>
-                          )}
-                          <button onClick={() => deleteBooking(b.id)} className="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400">
-                            <Trash className="w-3.5 h-3.5" />
-                          </button>
+                        <div className="mt-5 p-4 border border-[var(--color-sls-line)] bg-[rgba(232,185,63,0.02)] rounded-xl">
+                          <h4 className="text-[11.5px] text-[var(--color-sls-gold)] font-medium mb-3">Optional: Birth Details for Chart Generation</h4>
+                          <div className="grid grid-cols-3 gap-3">
+                            <input type="date" value={newBooking.birthDate} onChange={e => setNewBooking({ ...newBooking, birthDate: e.target.value })} className="col-span-3 md:col-span-1 bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-1.5 text-[12.5px] text-[var(--color-sls-ivory)] focus:border-[var(--color-sls-gold)] focus:outline-none" />
+                            <input type="text" placeholder="Time (14:35)" value={newBooking.birthTime} onChange={e => setNewBooking({ ...newBooking, birthTime: e.target.value })} className="col-span-3 md:col-span-1 bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-1.5 text-[12.5px] focus:border-[var(--color-sls-gold)] focus:outline-none" />
+                            <input type="text" placeholder="City/Place" value={newBooking.birthPlace} onChange={e => setNewBooking({ ...newBooking, birthPlace: e.target.value })} className="col-span-3 md:col-span-1 bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-3 py-1.5 text-[12.5px] focus:border-[var(--color-sls-gold)] focus:outline-none" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    {dbBookings.length === 0 && (
-                      <div className="py-12 text-center text-[#596478]">No celestial consultations scheduled yet.</div>
-                    )}
+
+                        <div className="flex justify-end gap-3 mt-6">
+                          <button type="button" onClick={() => setShowCreateForm(false)} className="px-5 py-2.5 rounded-lg border border-[var(--color-sls-line-strong)] text-[13.5px] text-[var(--color-sls-muted)] hover:border-[var(--color-sls-gold-bright)] hover:text-[var(--color-sls-gold-bright)]">Cancel</button>
+                          <button type="submit" className="px-5 py-2.5 rounded-lg bg-[var(--color-sls-gold)] text-[#1a1305] text-[13.5px] font-medium hover:bg-[var(--color-sls-gold-bright)] shadow-[0_4px_16px_rgba(201,162,39,0.3)]">Schedule Booking</button>
+                        </div>
+                      </form>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })()}
@@ -3901,71 +3841,163 @@ ${urls.map(url => `  <url>
           {activeTab === 'ai_guru' && (() => {
 
             return (
-              <div className="space-y-6 max-w-5xl">
-                <div>
-                  <h2 className="font-serif text-2xl font-bold text-[#f5d98a] flex items-center gap-2">🧠 AI Astrologer Guru & saved consultations</h2>
-                  <p className="text-xs text-[#8b96aa] mt-0.5">Tweak the system guidelines of Acharya TN Khurana's 24/7 Spiritual Virtual Persona, and audit saved client chats.</p>
+              <div className="space-y-6 max-w-6xl mx-auto font-outfit text-left mt-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-sls-line)] pb-4">
+                  <div>
+                    <h2 className="font-cinzel text-xl text-[var(--color-sls-gold)] font-medium">AI Guru Configurations</h2>
+                    <p className="text-[13px] text-[var(--color-sls-muted)] mt-1">Configure Acharya TN Khurana's parameters, models, and conversational tone.</p>
+                  </div>
+                  <div className="flex gap-2.5">
+                    <button className="px-4 py-2 border border-[var(--color-sls-line-strong)] rounded-lg text-[13px] text-[var(--color-sls-ivory)] hover:border-[var(--color-sls-gold-bright)] hover:text-[var(--color-sls-gold-bright)] flex items-center gap-2">
+                      <span className="text-[var(--color-sls-gold)] animate-pulse">●</span> System Online
+                    </button>
+                    <button className="px-4 py-2 bg-gradient-to-r from-[var(--color-sls-gold)] to-[var(--color-sls-gold-bright)] text-[#1a1305] rounded-lg text-[13px] font-medium shadow-[0_4px_16px_rgba(201,162,39,0.3)] transition-all hover:scale-[1.02]">
+                      Deploy Core Updates
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Left Column: List saved consults */}
-                  <div className="p-6 rounded-2xl bg-[#0a0e18]/40 border border-white/5 space-y-4">
-                    <h3 className="text-sm font-bold text-white border-b border-white/5 pb-2">💾 Saved Seeker Dialogs</h3>
-                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2 scrollbar-thin">
-                      {savedSessions.map(sess => (
-                        <div 
-                          key={sess.id}
-                          onClick={() => setActiveSession(sess)}
-                          className={`p-3 rounded-xl border cursor-pointer text-left transition-all ${
-                            activeSession?.id === sess.id 
-                              ? 'bg-[#C9A227]/10 border-[#C9A227]' 
-                              : 'bg-white/[0.01] border-white/5 hover:bg-white/[0.03]'
-                          }`}
-                        >
-                          <div className="font-semibold text-xs text-white truncate">{sess.title || 'Astrological Consultation'}</div>
-                          <div className="text-[10px] text-[#596478] mt-1 flex justify-between">
-                            <span>{sess.userEmail}</span>
-                            <span>{new Date(sess.createdAt).toLocaleDateString()}</span>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Left Sidebar Config */}
+                  <div className="lg:col-span-4 space-y-4">
+                    
+                    <div className="bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] rounded-2xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                      <h3 className="text-sm font-semibold text-[var(--color-sls-ivory)] mb-4 flex items-center gap-2">
+                        <span className="text-[var(--color-sls-gold)] font-mono text-lg">⚙</span> Engine & Model
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[11px] text-[var(--color-sls-muted)] uppercase tracking-[0.05em] mb-1.5 font-bold">Primary LLM Provider</label>
+                          <select className="w-full bg-[rgba(255,255,255,0.02)] border border-[var(--color-sls-line)] rounded-lg px-3 py-2.5 text-[13px] text-[var(--color-sls-ivory)] focus:border-[var(--color-sls-gold)] focus:outline-none transition-colors">
+                            <option value="gemini">Google Gemini 1.5 Pro</option>
+                            <option value="claude">Anthropic Claude 3 Opus</option>
+                            <option value="openai">OpenAI GPT-4o</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <label className="text-[11px] text-[var(--color-sls-muted)] uppercase tracking-[0.05em] font-bold">Creativity / Temperature</label>
+                            <span className="text-[10px] text-[var(--color-sls-gold)] font-mono">0.65</span>
+                          </div>
+                          <input type="range" min="0" max="100" defaultValue="65" className="w-full accent-[var(--color-sls-gold)] cursor-pointer" />
+                          <div className="flex justify-between text-[10px] text-[var(--color-sls-muted)] mt-1">
+                            <span>Strict (Factual)</span>
+                            <span>Creative (Fluid)</span>
                           </div>
                         </div>
-                      ))}
-                      {savedSessions.length === 0 && (
-                        <p className="text-center text-xs text-[#596478] py-8">No saved consultations registered yet.</p>
-                      )}
+
+                        <div>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <label className="text-[11px] text-[var(--color-sls-muted)] uppercase tracking-[0.05em] font-bold">Max Output Tokens</label>
+                            <span className="text-[10px] text-[var(--color-sls-gold)] font-mono">1024</span>
+                          </div>
+                          <input type="range" min="256" max="4096" defaultValue="1024" className="w-full accent-[var(--color-sls-gold)] cursor-pointer" />
+                        </div>
+                      </div>
                     </div>
+
+                    <div className="bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] rounded-2xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                       <h3 className="text-sm font-semibold text-[var(--color-sls-ivory)] mb-4 flex items-center gap-2">
+                        <span className="text-[var(--color-sls-gold)] font-mono text-lg">💾</span> Saved Sessions Log
+                      </h3>
+                      <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+                        {savedSessions.map(sess => (
+                          <div 
+                            key={sess.id}
+                            onClick={() => setActiveSession(sess)}
+                            className={`p-3 rounded-xl border cursor-pointer text-left transition-all ${
+                              activeSession?.id === sess.id 
+                                ? 'bg-[rgba(232,185,63,0.08)] border-[var(--color-sls-gold)]' 
+                                : 'bg-[rgba(255,255,255,0.01)] border-[var(--color-sls-line)] hover:bg-[rgba(255,255,255,0.03)]'
+                            }`}
+                          >
+                            <div className="font-semibold text-[13px] text-[var(--color-sls-ivory)] truncate mb-1">{sess.title || 'Astrological Consultation'}</div>
+                            <div className="text-[11px] text-[var(--color-sls-muted)] flex justify-between items-center">
+                              <span className="truncate max-w-[120px]">{sess.userEmail}</span>
+                              <span className="shrink-0">{new Date(sess.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        ))}
+                        {savedSessions.length === 0 && (
+                          <div className="py-8 text-center border border-dashed border-[var(--color-sls-line)] rounded-lg bg-[rgba(255,255,255,0.01)]">
+                            <span className="text-xl mb-2 block opacity-50">📋</span>
+                            <p className="text-[11px] text-[var(--color-sls-muted)]">No sessions recorded yet.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                   </div>
 
-                  {/* Right Column: Chat details viewer */}
-                  <div className="md:col-span-2 p-6 rounded-2xl bg-[#0a0e18]/40 border border-white/5 space-y-4 text-left">
-                    <h3 className="text-sm font-bold text-[#f5d98a] border-b border-white/5 pb-2">💬 Conversations Interaction Detail Viewer</h3>
-                    {activeSession ? (
-                      <div className="space-y-4">
-                        <div className="bg-white/[0.02] border border-white/5 p-3 rounded-xl">
-                          <label className="text-[10px] text-[#596478] block font-bold uppercase">Consultation Client Profile</label>
-                          <p className="text-xs font-semibold text-white mt-1">Email: <span className="text-[#C9A227]">{activeSession.userEmail}</span> | Saved on: {new Date(activeSession.createdAt).toLocaleString()}</p>
-                        </div>
+                  {/* Main Content Area */}
+                  <div className="lg:col-span-8 space-y-4">
+                    
+                    {/* Prompt Engineering Panel */}
+                    <div className="bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] rounded-2xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex flex-col h-[320px]">
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="text-sm font-semibold text-[var(--color-sls-ivory)] flex items-center gap-2">
+                          <span className="text-[var(--color-sls-gold)] font-mono text-lg">📝</span> Master System Prompt
+                        </h3>
+                        <div className="text-[10px] uppercase font-mono tracking-wider bg-[rgba(232,185,63,0.1)] text-[var(--color-sls-gold-bright)] px-2 py-1 rounded">Active Directive</div>
+                      </div>
+                      
+                      <textarea 
+                        className="flex-1 w-full bg-[rgba(0,0,0,0.3)] border border-[var(--color-sls-line-strong)] rounded-xl p-4 text-[13px] text-[var(--color-sls-ivory)] font-mono leading-relaxed resize-none focus:border-[var(--color-sls-gold)] focus:outline-none focus:ring-1 focus:ring-[var(--color-sls-gold)] transition-all"
+                        defaultValue="You are Acharya TN Khurana, an expert Vedic astrologer with over 40 years of experience. Your tone is respectful, deeply spiritual, yet immensely practical and grounded in classical Parashara astrology. 
 
-                        {/* Speech bubbles scroll list */}
-                        <div className="space-y-3 max-h-80 overflow-y-auto pr-2 bg-black/20 p-4 rounded-xl border border-white/5">
-                          {(activeSession.messages || []).map((msg: any, i: number) => (
-                            <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                              <span className="text-[9px] text-[#596478] mb-1 font-bold">{msg.role === 'user' ? 'Client' : 'AI Guru'}</span>
-                              <div className={`p-3 rounded-2xl max-w-[85%] text-xs leading-relaxed ${
-                                msg.role === 'user' 
-                                  ? 'bg-[#C9A227] text-slate-900 rounded-tr-none font-medium' 
-                                  : 'bg-[#121829] text-slate-200 border border-white/5 rounded-tl-none font-mono'
-                              }`}>
-                                {msg.content}
+Always start your consultations by acknowledging the planetary positions provided. Use Sanskrit terminology occasionally but always explain it in simple terms. Never give fatalistic predictions; always offer remedial measures (Upayas) such as mantras, gemstone suggestions, or charitable acts."
+                      ></textarea>
+                    </div>
+
+                    {/* Chat Session Viewer */}
+                    <div className="bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] rounded-2xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] min-h-[400px] flex flex-col">
+                      <div className="flex justify-between items-center mb-4 pb-3 border-b border-[var(--color-sls-line)]">
+                        <h3 className="text-sm font-semibold text-[var(--color-sls-ivory)] flex items-center gap-2">
+                          <span className="text-[var(--color-sls-gold)] font-mono text-lg">💬</span> Session Replay Viewer
+                        </h3>
+                        {activeSession && (
+                          <div className="text-[11.5px] text-[var(--color-sls-muted)] flex items-center gap-2">
+                            <span>Client: <span className="text-[var(--color-sls-gold)]">{activeSession.userEmail}</span></span>
+                            <span className="w-1 h-4 bg-[var(--color-sls-line)] mx-1"></span>
+                            <span>{new Date(activeSession.createdAt).toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 bg-[rgba(0,0,0,0.2)] border border-[var(--color-sls-line)] rounded-xl p-4 overflow-y-auto max-h-[400px]">
+                        {activeSession ? (
+                          <div className="space-y-4">
+                            {(activeSession.messages || []).map((msg: any, i: number) => (
+                              <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                                <span className="text-[10px] uppercase tracking-wider text-[var(--color-sls-muted)] mb-1.5 font-bold">
+                                  {msg.role === 'user' ? 'Client' : 'AI Guru'}
+                                </span>
+                                <div className={`p-3.5 rounded-2xl max-w-[85%] text-[13px] leading-relaxed shadow-sm ${
+                                  msg.role === 'user' 
+                                    ? 'bg-[rgba(232,185,63,0.15)] text-[var(--color-sls-ivory)] border border-[rgba(232,185,63,0.3)] rounded-tr-sm' 
+                                    : 'bg-[rgba(255,255,255,0.03)] text-[var(--color-sls-muted)] border border-[var(--color-sls-line)] rounded-tl-sm'
+                                }`}>
+                                  {msg.content}
+                                </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                            {(!activeSession.messages || activeSession.messages.length === 0) && (
+                              <div className="flex items-center justify-center h-full text-[12px] text-[var(--color-sls-muted)] italic">
+                                Session transcript is empty or corrupted.
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-[200px] text-[var(--color-sls-muted)]">
+                            <span className="text-3xl mb-3 opacity-30">👁️</span>
+                            <p className="text-[12.5px]">Select a session from the sidebar to review transcripts.</p>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="py-24 text-center text-[#596478] text-xs">
-                        Select an astrological consultation on the left sidebar to audit interaction records.
-                      </div>
-                    )}
+                    </div>
+
                   </div>
                 </div>
               </div>
@@ -3975,12 +4007,12 @@ ${urls.map(url => `  <url>
           {/* TAB 13: ASTROLOGY TOOLKIT TOGGLE */}
           {activeTab === 'toolkit' && (() => {
             const allAvailableTools = [
-              { id: 'birth_chart', name: '🌌 Birth Chart Generator', desc: 'Computes solar houses, constellations positions and ascendants graphs on natal time.' },
-              { id: 'kundli', name: '🔮 Kundli Matchmaking', desc: 'Computes Guna Milan (36 points) algorithms to evaluate wedding partners.' },
-              { id: 'horoscope', name: '✨ Daily, Weekly & Monthly Horoscope', desc: 'Dynamic celestial transit forecasts based on stellar nakshatras.' },
-              { id: 'numerology', name: '🍀 Chaldean/Gematria Numerology', desc: 'Evaluates numeric frequencies of names, phone numbers and solar dates.' },
-              { id: 'manglik', name: '🔥 Manglik Dosha Evaluator', desc: 'Finds astrological afflictions and Mars houses weights with remedies.' },
-              { id: 'gemstone', name: '💎 Gemstone Recommendation Engine', desc: 'Suggests high-carat mineral elements to strengthen aura frequencies.' }
+              { id: 'birth_chart', name: 'Birth Chart Generator', desc: 'Computes solar houses, constellations positions and ascendants graphs on natal time.', icon: '🌌' },
+              { id: 'kundli', name: 'Kundli Matchmaking', desc: 'Computes Guna Milan (36 points) algorithms to evaluate wedding partners.', icon: '🔮' },
+              { id: 'horoscope', name: 'Monthly Horoscope', desc: 'Dynamic celestial transit forecasts based on stellar nakshatras.', icon: '✨' },
+              { id: 'numerology', name: 'Chaldean Numerology', desc: 'Evaluates numeric frequencies of names, phone numbers and solar dates.', icon: '🍀' },
+              { id: 'manglik', name: 'Manglik Evaluator', desc: 'Finds astrological afflictions and Mars houses weights with remedies.', icon: '🔥' },
+              { id: 'gemstone', name: 'Gemstone Engine', desc: 'Suggests high-carat mineral elements to strengthen aura frequencies.', icon: '💎' }
             ];
 
             const toggleTool = (toolId: string) => {
@@ -4002,36 +4034,74 @@ ${urls.map(url => `  <url>
             };
 
             return (
-              <div className="space-y-6 max-w-4xl text-left">
-                <div>
-                  <h2 className="font-serif text-2xl font-bold text-[#f5d98a]">Vedic Astrology Toolkit Manager</h2>
-                  <p className="text-xs text-[#8b96aa] mt-0.5">Toggle standard, high-performance birth computation algorithms on your client portal. Deactivated elements hide from end-users instantly.</p>
+              <div className="space-y-8 max-w-5xl mx-auto font-outfit text-left mt-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-sls-line)] pb-5">
+                  <div>
+                    <h2 className="font-cinzel text-xl md:text-2xl text-[var(--color-sls-gold)] font-medium">Vedic Tool Manager</h2>
+                    <p className="text-[13px] md:text-sm text-[var(--color-sls-muted)] mt-1 max-w-lg">Manage digital astrological tools and algorithm endpoints on the client portal. Deactivated elements hide from end-users instantly.</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button className="px-4 py-2 border border-[var(--color-sls-line-strong)] rounded-lg text-[13px] text-[var(--color-sls-ivory)] hover:border-[var(--color-sls-gold-bright)] hover:text-[var(--color-sls-gold-bright)] transition-all">
+                      View Audit Log
+                    </button>
+                    <button className="px-4 py-2 bg-[var(--color-sls-gold)] text-[#1a1305] rounded-lg text-[13px] font-medium shadow-[0_4px_16px_rgba(201,162,39,0.3)] transition-all hover:scale-[1.02] hover:bg-[var(--color-sls-gold-bright)]">
+                      + Add Custom Tool
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {allAvailableTools.map(tool => {
                     const isEnabled = (dbToolkitSettings.activeTools || []).includes(tool.id);
                     return (
                       <div 
                         key={tool.id} 
-                        className={`p-5 rounded-2xl border transition-all flex items-start gap-4 ${
+                        className={`relative p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between overflow-hidden group ${
                           isEnabled 
-                            ? 'bg-[#C9A227]/5 border-[#C9A227]/20 shadow-md' 
-                            : 'bg-white/[0.01] border-white/5 opacity-60'
+                            ? 'bg-gradient-to-br from-[rgba(232,185,63,0.06)] to-transparent border-[var(--color-sls-gold)] shadow-[0_8px_24px_rgba(232,185,63,0.12)]' 
+                            : 'bg-[rgba(255,255,255,0.015)] border-[var(--color-sls-line)] hover:border-[var(--color-sls-line-strong)]'
                         }`}
                       >
-                        <div className="flex-1 space-y-1">
-                          <h4 className="font-serif text-sm font-bold text-white">{tool.name}</h4>
-                          <p className="text-[11px] text-[#596478] leading-normal">{tool.desc}</p>
+                        {isEnabled && <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-sls-gold)] blur-[80px] opacity-20 pointer-events-none"></div>}
+                        
+                        <div className="relative z-10">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-sm ${
+                              isEnabled 
+                                ? 'bg-[var(--color-sls-gold)] text-[#1a1305]' 
+                                : 'bg-[rgba(255,255,255,0.05)] border border-[var(--color-sls-line)] text-white grayscale opacity-70'
+                            }`}>
+                              {tool.icon}
+                            </div>
+                            
+                            <button 
+                              onClick={() => toggleTool(tool.id)}
+                              className={`w-12 h-6 rounded-full p-1 flex items-center transition-all duration-300 ${
+                                isEnabled ? 'bg-[var(--color-sls-gold)] justify-end' : 'bg-[rgba(255,255,255,0.1)] justify-start'
+                              }`}
+                            >
+                              <span className={`w-4 h-4 rounded-full shadow-sm transition-all duration-300 ${isEnabled ? 'bg-[#1a1305]' : 'bg-white/60'}`}></span>
+                            </button>
+                          </div>
+
+                          <h3 className={`font-semibold text-base mb-2 transition-colors ${isEnabled ? 'text-[var(--color-sls-ivory)]' : 'text-[var(--color-sls-muted)]'}`}>
+                            {tool.name}
+                          </h3>
+                          <p className={`text-[12px] leading-relaxed line-clamp-3 transition-colors ${isEnabled ? 'text-[rgba(245,239,224,0.7)]' : 'text-[#596478]'}`}>
+                            {tool.desc}
+                          </p>
                         </div>
-                        <button 
-                          onClick={() => toggleTool(tool.id)}
-                          className={`w-14 h-7 rounded-full px-1 flex items-center transition-all shrink-0 ${
-                            isEnabled ? 'bg-emerald-500 justify-end' : 'bg-white/10 justify-start'
-                          }`}
-                        >
-                          <span className="w-5 h-5 rounded-full bg-white shadow-sm inline-block"></span>
-                        </button>
+
+                        <div className="relative z-10 mt-5 pt-4 border-t border-[rgba(255,255,255,0.06)] flex justify-between items-center">
+                          <span className={`text-[10px] uppercase font-mono tracking-wider font-semibold ${
+                            isEnabled ? 'text-[#7BC98E]' : 'text-[#FF6B6B]'
+                          }`}>
+                            {isEnabled ? '● Active' : '○ Offline'}
+                          </span>
+                          <button className={`text-[11px] hover:underline ${isEnabled ? 'text-[var(--color-sls-gold)]' : 'text-[var(--color-sls-muted)]'}`}>
+                            Configure →
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -4042,85 +4112,13 @@ ${urls.map(url => `  <url>
 
           {/* TAB 14: NOTIFICATIONS & SOUND PARAMETERS */}
           {activeTab === 'notifications' && (
-            <div className="space-y-6 max-w-3xl text-left">
-              <div>
-                <h2 className="font-serif text-2xl font-bold text-[#f5d98a]">Sound Alert and Notifications Centre</h2>
-                <p className="text-xs text-[#8b96aa] mt-0.5">Control live alert acoustics, configure volume meters, and clear active pending alerts streams.</p>
-              </div>
-
-              {/* Master controls block */}
-              <div className="p-6 rounded-2xl bg-[#0a0e18]/40 border border-white/5 space-y-6">
-                <h3 className="text-sm font-bold text-white border-b border-white/5 pb-2">🎛️ Master Audio Decibels Settings</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Toggle audio */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#8b96aa]">Turn On Audible Beepa Alerts</label>
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => {
-                          const updated = { ...dbNotificationSettings, soundEnabled: !dbNotificationSettings.soundEnabled };
-                          setDbNotificationSettings(updated);
-                          fetch('/api/admin/notification-settings', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(updated)
-                          });
-                        }}
-                        className={`w-14 h-7 rounded-full px-1 flex items-center transition-all ${
-                          dbNotificationSettings.soundEnabled ? 'bg-rose-500 justify-end' : 'bg-white/10 justify-start'
-                        }`}
-                      >
-                        <span className="w-5 h-5 rounded-full bg-white inline-block"></span>
-                      </button>
-                      <span className="text-xs font-semibold text-white">{dbNotificationSettings.soundEnabled ? '🔔 Sound alerts active' : '🔕 Absolute silent mode'}</span>
-                    </div>
-                  </div>
-
-                  {/* Slider volume */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold text-[#8b96aa]">
-                      <span>Bell Volume (Gain Meter)</span>
-                      <span>{Math.round(dbNotificationSettings.volume * 100)}%</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="1" 
-                      step="0.05"
-                      value={dbNotificationSettings.volume}
-                      onChange={e => {
-                        const updated = { ...dbNotificationSettings, volume: parseFloat(e.target.value) };
-                        setDbNotificationSettings(updated);
-                        fetch('/api/admin/notification-settings', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(updated)
-                        });
-                      }}
-                      className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                    />
-                    <div className="flex justify-between text-[9px] text-[#596478]">
-                      <span>Whisper</span>
-                      <span>Loud Temple Chime</span>
-                    </div>
-                  </div>
+            <div className="space-y-6 max-w-5xl mx-auto font-outfit text-left mt-4">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-sls-line)] pb-5">
+                <div>
+                  <h2 className="font-cinzel text-xl md:text-2xl text-[var(--color-sls-gold)] font-medium">Sound Alert Centre</h2>
+                  <p className="text-[13px] md:text-sm text-[var(--color-sls-muted)] mt-1 max-w-lg">Control live alert acoustics, configure volume meters, and clear active pending alerts streams.</p>
                 </div>
-
-                <div className="pt-2">
-                  <button 
-                    onClick={() => triggerAlarmSound(dbNotificationSettings.volume)} 
-                    className="btn btn-outline-gold btn-sm h-11 flex items-center gap-2"
-                  >
-                    <Volume2 className="w-4 h-4 text-[#C9A227]" /> Test Synthesizer Resonance Sound
-                  </button>
-                </div>
-              </div>
-
-              {/* Alerts Log history */}
-              <div className="p-6 rounded-2xl bg-[#0a0e18]/40 border border-white/5 space-y-4">
-                <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <h3 className="text-sm font-bold text-white">🗂️ Active Notifications Log ({dbNotifications.length})</h3>
+                <div className="flex gap-3">
                   <button 
                     onClick={async () => {
                       const res = await fetch('/api/admin/notifications/read-all', { method: 'POST' });
@@ -4128,42 +4126,141 @@ ${urls.map(url => `  <url>
                         setDbNotifications(prev => prev.map(n => ({ ...n, status: 'read' })));
                         setUnreadNotificationsCount(0);
                       }
-                    }} 
-                    className="text-xs text-[#C9A227] hover:underline"
+                    }}
+                    className="px-4 py-2 border border-[var(--color-sls-line-strong)] rounded-lg text-[13px] text-[var(--color-sls-ivory)] hover:border-[var(--color-sls-gold-bright)] hover:text-[var(--color-sls-gold-bright)] transition-all"
                   >
-                    Mark all as read
+                    Mark All as Read
                   </button>
                 </div>
+              </div>
 
-                <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-                  {dbNotifications.map(n => (
-                    <div key={n.id} className={`p-4 rounded-xl border flex items-start gap-4 ${
-                      n.status === 'unread' ? 'bg-rose-500/5 border-rose-500/25' : 'bg-white/[0.01] border-white/5'
-                    }`}>
-                      <div className="text-lg mt-0.5 shrink-0">
-                        {n.type === 'Booking' && '📅'}
-                        {n.type === 'Order' && '🛍️'}
-                        {n.type === 'Payment' && '💳'}
-                        {n.type === 'New User' && '👤'}
-                        {n.type === 'Inquiry' && '✉️'}
-                      </div>
-                      <div className="flex-1 space-y-0.5 text-left">
-                        <div className="font-semibold text-xs text-white flex justify-between">
-                          <span>{n.title}</span>
-                          <span className="text-[9px] text-[#596478] font-mono">{new Date(n.createdAt).toLocaleTimeString()}</span>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Master controls block */}
+                <div className="lg:col-span-5 space-y-4">
+                  <div className="bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] rounded-2xl p-6 shadow-[0_10px_30px_rgba(0,0,0,0.5)] h-full">
+                    <h3 className="text-sm font-semibold text-[var(--color-sls-ivory)] mb-6 flex items-center gap-2">
+                      <span className="text-[var(--color-sls-gold)] font-mono text-lg">🎛️</span> Audio Settings
+                    </h3>
+                    
+                    <div className="space-y-8">
+                      {/* Toggle audio */}
+                      <div className="space-y-3">
+                        <label className="text-[11px] text-[var(--color-sls-muted)] uppercase tracking-[0.05em] font-bold block">Master Alert Switch</label>
+                        <div className="flex items-center gap-4 p-4 border border-[var(--color-sls-line-strong)] rounded-xl bg-[rgba(255,255,255,0.02)]">
+                          <button 
+                            onClick={() => {
+                              const updated = { ...dbNotificationSettings, soundEnabled: !dbNotificationSettings.soundEnabled };
+                              setDbNotificationSettings(updated);
+                              fetch('/api/admin/notification-settings', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(updated)
+                              });
+                            }}
+                            className={`w-12 h-6 rounded-full p-1 flex items-center transition-all duration-300 ${
+                              dbNotificationSettings.soundEnabled ? 'bg-[var(--color-sls-gold)] justify-end' : 'bg-[rgba(255,255,255,0.1)] justify-start'
+                            }`}
+                          >
+                            <span className={`w-4 h-4 rounded-full shadow-sm transition-all duration-300 ${dbNotificationSettings.soundEnabled ? 'bg-[#1a1305]' : 'bg-white/60'}`}></span>
+                          </button>
+                          <div className="flex-1">
+                            <span className={`text-[13px] font-medium block ${dbNotificationSettings.soundEnabled ? 'text-[#7BC98E]' : 'text-[var(--color-sls-muted)]'}`}>
+                              {dbNotificationSettings.soundEnabled ? 'Alerts Active' : 'Silent Mode'}
+                            </span>
+                            <span className="text-[11px] text-[#596478]">Global notification sounds</span>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-[#8b96aa] leading-relaxed">{n.message}</p>
+                      </div>
+
+                      {/* Slider volume */}
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="text-[11px] text-[var(--color-sls-muted)] uppercase tracking-[0.05em] font-bold">Gain Volume</label>
+                          <span className="text-[10px] text-[var(--color-sls-gold)] font-mono bg-[rgba(232,185,63,0.1)] px-2 py-0.5 rounded">{Math.round(dbNotificationSettings.volume * 100)}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="1" 
+                          step="0.05"
+                          value={dbNotificationSettings.volume}
+                          onChange={e => {
+                            const updated = { ...dbNotificationSettings, volume: parseFloat(e.target.value) };
+                            setDbNotificationSettings(updated);
+                            fetch('/api/admin/notification-settings', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify(updated)
+                            });
+                          }}
+                          className="w-full accent-[var(--color-sls-gold)] cursor-pointer h-1.5 bg-[var(--color-sls-line-strong)] rounded-lg appearance-none"
+                        />
+                        <div className="flex justify-between text-[10px] text-[#596478] mt-1">
+                          <span>Whisper</span>
+                          <span>Temple Chime</span>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4 border-t border-[var(--color-sls-line-strong)]">
+                        <button 
+                          onClick={() => triggerAlarmSound(dbNotificationSettings.volume)} 
+                          className="w-full px-4 py-3 bg-[rgba(232,185,63,0.05)] border border-[var(--color-sls-gold)] text-[var(--color-sls-gold)] hover:bg-[rgba(232,185,63,0.1)] rounded-lg text-[13px] font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                          <span>🔊</span> Test Synthesizer Output
+                        </button>
                       </div>
                     </div>
-                  ))}
-                  {dbNotifications.length === 0 && (
-                    <div className="py-12 text-center text-xs text-[#596478]">No alarm events currently saved inside portal stack logs.</div>
-                  )}
+                  </div>
+                </div>
+
+                {/* Alerts Log history */}
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] rounded-2xl p-6 shadow-[0_10px_30px_rgba(0,0,0,0.5)] min-h-[400px]">
+                    <div className="flex justify-between items-center mb-6 border-b border-[var(--color-sls-line)] pb-4">
+                      <h3 className="text-sm font-semibold text-[var(--color-sls-ivory)] flex items-center gap-2">
+                        <span className="text-[var(--color-sls-gold)] font-mono text-lg">🗂️</span> Active Stream <span className="ml-2 px-2 py-0.5 bg-[rgba(255,255,255,0.05)] rounded text-[11px]">{dbNotifications.length}</span>
+                      </h3>
+                    </div>
+
+                    <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2">
+                      {dbNotifications.map(n => (
+                        <div key={n.id} className={`p-4 rounded-xl border flex items-start gap-4 transition-colors ${
+                          n.status === 'unread' 
+                            ? 'bg-[rgba(255,107,107,0.05)] border-[#FF6B6B]/30 shadow-sm' 
+                            : 'bg-[rgba(255,255,255,0.015)] border-[var(--color-sls-line)] hover:bg-[rgba(255,255,255,0.03)]'
+                        }`}>
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 ${
+                            n.status === 'unread' ? 'bg-[#FF6B6B]/20 text-[#FF6B6B]' : 'bg-[rgba(255,255,255,0.05)] opacity-60'
+                          }`}>
+                            {n.type === 'Booking' && '📅'}
+                            {n.type === 'Order' && '🛍️'}
+                            {n.type === 'Payment' && '💳'}
+                            {n.type === 'New User' && '👤'}
+                            {n.type === 'Inquiry' && '✉️'}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className={`font-medium text-[13.5px] ${n.status === 'unread' ? 'text-white' : 'text-[var(--color-sls-ivory)]'}`}>{n.title}</span>
+                              <span className="text-[10px] text-[#596478] font-mono shrink-0">{new Date(n.createdAt).toLocaleTimeString()}</span>
+                            </div>
+                            <p className="text-[12px] text-[var(--color-sls-muted)] leading-relaxed">{n.message}</p>
+                          </div>
+                        </div>
+                      ))}
+                      {dbNotifications.length === 0 && (
+                        <div className="py-16 flex flex-col items-center justify-center text-center">
+                          <span className="text-3xl mb-4 opacity-20">📭</span>
+                          <p className="text-[13px] text-[var(--color-sls-muted)]">No alarm events currently saved inside portal stack logs.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
+          {/* TAB 15: SEEKERS & PORTAL REGISTRANTS */}
           {/* TAB 15: SEEKERS & PORTAL REGISTRANTS */}
           {activeTab === 'users' && (() => {
             const filteredSeekers = seekers.filter(s => 
@@ -4173,57 +4270,67 @@ ${urls.map(url => `  <url>
             );
 
             return (
-              <div className="space-y-6 max-w-4xl text-left">
-                <div>
-                  <h2 className="font-serif text-2xl font-bold text-[#f5d98a]">Registered Seekers Database</h2>
-                  <p className="text-xs text-[#8b96aa] mt-0.5">Control client authorization profiles, verify manual registrations, and view logins telemetry.</p>
+              <div className="space-y-6 max-w-6xl mx-auto font-outfit text-left mt-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-sls-line)] pb-5">
+                  <div>
+                    <h2 className="font-cinzel text-xl md:text-2xl text-[var(--color-sls-gold)] font-medium">Registered Seekers Database</h2>
+                    <p className="text-[13px] md:text-sm text-[var(--color-sls-muted)] mt-1 max-w-lg">Control client authorization profiles, verify manual registrations, and view logins telemetry.</p>
+                  </div>
                 </div>
 
-                <div className="p-6 rounded-2xl bg-[#0a0e18]/40 border border-white/5 space-y-4">
-                  <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-hidden">
+                  <div className="flex items-center gap-3 p-4 border-b border-[var(--color-sls-line)]">
                     <input 
                       type="text" 
                       placeholder="🔍 Search seeker profiles by Name, Email or City/Location..."
                       value={clientQuery}
                       onChange={e => setClientQuery(e.target.value)}
-                      className="form-input text-xs"
+                      className="bg-[rgba(255,255,255,0.03)] border border-[var(--color-sls-line-strong)] rounded-lg px-4 py-2 text-[13px] w-full max-w-md focus:border-[var(--color-sls-gold)] focus:outline-none placeholder:text-[var(--color-sls-muted)] text-[var(--color-sls-ivory)]"
                     />
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-white/5 text-[#596478] font-bold uppercase text-[9px] tracking-wider">
-                          <th className="pb-3 text-left">Seeker / Location</th>
-                          <th className="pb-3 text-left">Contact Channel</th>
-                          <th className="pb-3 text-center">Security Status</th>
-                          <th className="pb-3 text-right">Joined Portal</th>
+                    <table className="w-full text-left">
+                      <thead className="bg-[rgba(232,185,63,0.02)] border-b border-[var(--color-sls-line)]">
+                        <tr>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium">Seeker / Location</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium">Contact Channel</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium text-center">Security Status</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium text-right">Joined Portal</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5 font-mono">
+                      <tbody className="divide-y divide-[var(--color-sls-line)]">
                         {filteredSeekers.map(s => (
-                          <tr key={s.id} className="hover:bg-white/[0.01]">
-                            <td className="py-3.5 text-left font-sans">
-                              <div className="font-bold text-white text-sm">{s.name}</div>
-                              <div className="text-[10px] text-[#596478] mt-0.5 flex items-center gap-1">📍 {s.city || 'India'}</div>
+                          <tr key={s.id} className="hover:bg-[rgba(232,185,63,0.03)] transition-colors">
+                            <td className="px-5 py-4 align-middle">
+                              <div className="font-medium text-[var(--color-sls-ivory)]">{s.name}</div>
+                              <div className="text-[12px] text-[var(--color-sls-muted)] mt-1 flex items-center gap-1">📍 {s.city || 'India'}</div>
                             </td>
-                            <td className="py-3.5 text-left">
-                              <div className="text-white">{s.email}</div>
-                              <div className="text-[10px] text-[#596478] mt-0.5 font-sans">{s.phone || 'No phone registered'}</div>
+                            <td className="px-5 py-4 align-middle">
+                              <div className="text-[13.5px] text-[var(--color-sls-ivory)]">{s.email}</div>
+                              <div className="text-[12px] text-[var(--color-sls-muted)] mt-1">{s.phone || 'No phone registered'}</div>
                             </td>
-                            <td className="py-3.5 text-center">
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                            <td className="px-5 py-4 align-middle text-center">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11.5px] font-medium before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current ${
                                 s.verified 
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                  : 'bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse'
-                              }`}>{s.verified ? 'Verified' : 'Pending OTP verification'}</span>
+                                  ? 'text-[#7BC98E] bg-[rgba(123,201,142,0.12)]' 
+                                  : 'text-[var(--color-sls-gold-bright)] bg-[rgba(232,185,63,0.12)] animate-pulse'
+                              }`}>
+                                {s.verified ? 'Verified' : 'Pending OTP verification'}
+                              </span>
                             </td>
-                            <td className="py-3.5 text-right text-[#8b96aa] font-sans text-[11px]">{new Date(s.registeredDate || Date.now()).toLocaleDateString()}</td>
+                            <td className="px-5 py-4 align-middle text-right text-[13px] text-[var(--color-sls-muted)]">
+                              {new Date(s.registeredDate || Date.now()).toLocaleDateString()}
+                            </td>
                           </tr>
                         ))}
                         {filteredSeekers.length === 0 && (
                           <tr>
-                            <td colSpan={4} className="py-8 text-center text-[#596478]">No seeker profiles found in registry records.</td>
+                            <td colSpan={4} className="py-16 text-center text-[var(--color-sls-muted)]">
+                              <div className="text-[34px] text-[var(--color-sls-gold)] mb-3">👤</div>
+                              <h3 className="text-[var(--color-sls-ivory)] font-medium font-cinzel text-lg mb-2">No Profiles Found</h3>
+                              <p className="text-sm">There are no seeker profiles found in registry records.</p>
+                            </td>
                           </tr>
                         )}
                       </tbody>
@@ -4236,49 +4343,51 @@ ${urls.map(url => `  <url>
 
           {/* TAB 16: TELEMETRY & SYSTEM HEALTH FEED */}
           {activeTab === 'monitoring' && (
-            <div className="space-y-6 max-w-4xl text-left">
-              <div className="flex justify-between items-center">
+            <div className="space-y-6 max-w-6xl mx-auto font-outfit text-left mt-4">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-sls-line)] pb-5">
                 <div>
-                  <h2 className="font-serif text-2xl font-bold text-[#f5d98a] flex items-center gap-2">💾 Active Telemetry & Event Ticker</h2>
-                  <p className="text-xs text-[#8b96aa] mt-0.5">Scans backend pipeline transactions, database microservices, SMTP routes and live network stream ticks.</p>
+                  <h2 className="font-cinzel text-xl md:text-2xl text-[var(--color-sls-gold)] font-medium">Active Telemetry & Event Ticker</h2>
+                  <p className="text-[13px] md:text-sm text-[var(--color-sls-muted)] mt-1 max-w-lg">Scans backend pipeline transactions, database microservices, SMTP routes and live network stream ticks.</p>
                 </div>
               </div>
 
               {/* Connection diagnostics block */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-5 rounded-2xl bg-[#0a0e18]/45 border border-white/5 space-y-2">
-                  <div className="text-[10px] text-[#596478] font-bold uppercase">Dynamic Key Value Storage</div>
-                  <div className="text-sm font-semibold text-white flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Fully Persisted db.json Table
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] shadow-[0_10px_30px_rgba(0,0,0,0.5)] space-y-2">
+                  <div className="text-[11px] text-[var(--color-sls-muted)] font-bold uppercase tracking-[0.05em]">Dynamic Key Value Storage</div>
+                  <div className="text-[13px] font-semibold text-[var(--color-sls-ivory)] flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#7BC98E] shadow-[0_0_8px_#7BC98E]"></span> Fully Persisted db.json Table
                   </div>
                 </div>
-                <div className="p-5 rounded-2xl bg-[#0a0e18]/45 border border-white/5 space-y-2">
-                  <div className="text-[10px] text-[#596478] font-bold uppercase">Real-Time Event stream (SSE)</div>
-                  <div className="text-sm font-semibold text-white flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span> Live Listening pipelines active
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] shadow-[0_10px_30px_rgba(0,0,0,0.5)] space-y-2">
+                  <div className="text-[11px] text-[var(--color-sls-muted)] font-bold uppercase tracking-[0.05em]">Real-Time Event stream (SSE)</div>
+                  <div className="text-[13px] font-semibold text-[var(--color-sls-ivory)] flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#5EC8E8] shadow-[0_0_8px_#5EC8E8] animate-pulse"></span> Live Listening pipelines active
                   </div>
                 </div>
-                <div className="p-5 rounded-2xl bg-[#0a0e18]/45 border border-white/5 space-y-2">
-                  <div className="text-[10px] text-[#596478] font-bold uppercase">Gemini AI Model Sync</div>
-                  <div className="text-sm font-semibold text-white flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#C9A227]"></span> gemini-3.5-flash online
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[var(--color-sls-line)] shadow-[0_10px_30px_rgba(0,0,0,0.5)] space-y-2">
+                  <div className="text-[11px] text-[var(--color-sls-muted)] font-bold uppercase tracking-[0.05em]">Gemini AI Model Sync</div>
+                  <div className="text-[13px] font-semibold text-[var(--color-sls-ivory)] flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-sls-gold-bright)] shadow-[0_0_8px_var(--color-sls-gold-bright)]"></span> gemini-3.5-flash online
                   </div>
                 </div>
               </div>
 
               {/* Scrolling ticker lists */}
-              <div className="p-6 rounded-2xl bg-[#05080f] border border-white/5 space-y-4">
-                <h3 className="text-sm font-bold text-[#f5d98a] flex items-center gap-2 font-mono">⚡ LIVE SYSTEM DIAGNOSTIC PIPELINES</h3>
-                <div className="bg-[#0b0f19] p-5 rounded-xl border border-white/5 font-mono text-[11px] text-emerald-400 space-y-2 h-80 overflow-y-auto w-full text-left scrollbar-thin">
+              <div className="p-6 rounded-2xl bg-[#030200] border border-[var(--color-sls-line)] shadow-[0_10px_30px_rgba(0,0,0,0.5)] space-y-4">
+                <h3 className="text-sm font-bold text-[var(--color-sls-gold)] flex items-center gap-2 font-mono uppercase tracking-[0.05em]">
+                  <span className="animate-pulse">⚡</span> LIVE SYSTEM DIAGNOSTIC PIPELINES
+                </h3>
+                <div className="bg-[#080603] p-5 rounded-xl border border-[var(--color-sls-line-strong)] font-mono text-[11px] text-[#7BC98E] space-y-2.5 h-[350px] overflow-y-auto w-full text-left custom-scrollbar shadow-inner">
                   <div>[ {new Date().toLocaleTimeString()} ] SYSADMIN: Real-time telemetry channels established. Operating on standard port 3000 ingress loops.</div>
                   <div>[ {new Date().toLocaleTimeString()} ] DATABASE: Sync-loaded client.db collections securely.</div>
                   <div>[ {new Date().toLocaleTimeString()} ] AI SERVICE: Gemini flash pipelines successfully initialized. Fallback astrology model active.</div>
                   <div>[ {new Date().toLocaleTimeString()} ] WEBAUDIO: Tibetan bell chime frequencies synthesized successfully on channel loop.</div>
                   <div>[ {new Date().toLocaleTimeString()} ] CLIENT SERVICE: Total loaded registered seekers count is {seekers.length}.</div>
                   <div>[ {new Date().toLocaleTimeString()} ] ADMIN LOGS: System listening to sse socket routes at '/api/admin/notifications/stream'.</div>
-                  {activityLogs.slice(0, 10).map(log => (
-                    <div key={log.id} className="text-sky-305 text-sky-400">
-                      [ {new Date(log.timestamp).toLocaleTimeString()} ] {log.action}: {log.details} [ actor: {log.user} ]
+                  {activityLogs.slice(0, 15).map(log => (
+                    <div key={log.id} className="text-[#5EC8E8]">
+                      [ {new Date(log.timestamp).toLocaleTimeString()} ] {log.action}: {log.details} <span className="text-[var(--color-sls-muted)]">[ actor: {log.user} ]</span>
                     </div>
                   ))}
                 </div>
@@ -4291,21 +4400,21 @@ ${urls.map(url => `  <url>
 
       {/* FLOATING REAL-TIME SYSTEM NOTIFICATION POPUP ALARM WITH CUSTOM STYLING */}
       {notificationPopup && (
-        <div className="fixed bottom-6 right-6 z-[6000] w-96 p-5 rounded-2xl bg-[#0c101d] border-2 border-rose-500 shadow-2xl text-left flex gap-4 mr-1 animate-slide-in-up" style={{ animationDuration: '0.4s' }}>
-          <div className="text-2xl pt-1 shrink-0">
-            {notificationPopup.type === 'Booking' && '🛎️'}
+        <div className="fixed bottom-6 right-6 z-[6000] w-96 p-5 rounded-2xl bg-gradient-to-br from-[var(--color-sls-bg-panel)] to-[var(--color-sls-bg-panel-2)] border border-[#FF6B6B]/40 shadow-[0_20px_40px_rgba(0,0,0,0.8),0_0_20px_rgba(255,107,107,0.2)] text-left flex gap-4 mr-1 animate-slide-in-up" style={{ animationDuration: '0.4s' }}>
+          <div className="text-2xl pt-1 shrink-0 bg-[#FF6B6B]/10 w-10 h-10 rounded-full flex items-center justify-center border border-[#FF6B6B]/20">
+            {notificationPopup.type === 'Booking' && '📅'}
             {notificationPopup.type === 'Order' && '🛍️'}
             {notificationPopup.type === 'Payment' && '💳'}
             {notificationPopup.type === 'New User' && '👤'}
             {notificationPopup.type === 'Inquiry' && '✉️'}
           </div>
-          <div className="flex-1 space-y-1">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]">ALERT DISPATCHED</span>
-              <button onClick={() => setNotificationPopup(null)} className="text-[#596478] hover:text-white">✕</button>
+          <div className="flex-1 space-y-1 font-outfit">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#FF6B6B] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#FF6B6B] animate-pulse"></span> ALERT DISPATCHED</span>
+              <button onClick={() => setNotificationPopup(null)} className="text-[var(--color-sls-muted)] hover:text-white transition-colors w-6 h-6 flex items-center justify-center rounded-md hover:bg-[rgba(255,255,255,0.1)]">✕</button>
             </div>
-            <h4 className="font-serif text-sm font-bold text-white leading-snug">{notificationPopup.title}</h4>
-            <p className="text-xs text-[#8b96aa] leading-relaxed">{notificationPopup.message}</p>
+            <h4 className="font-cinzel text-[15px] font-bold text-[var(--color-sls-ivory)] leading-snug">{notificationPopup.title}</h4>
+            <p className="text-[12px] text-[var(--color-sls-muted)] leading-relaxed">{notificationPopup.message}</p>
           </div>
         </div>
       )}
