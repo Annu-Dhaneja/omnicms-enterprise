@@ -228,6 +228,32 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
   const [smtpLiveStatus, setSmtpLiveStatus] = useState<'Checking' | 'Connected' | 'Disconnected'>('Checking');
   const [smtpLiveError, setSmtpLiveError] = useState<string | null>(null);
 
+  // Hoisted States from Sacred Live Suite Tabs
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newBooking, setNewBooking] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    type: 'Career',
+    serviceName: 'Kundli Guna Milan & Kundli Reading',
+    date: new Date().toISOString().split('T')[0],
+    time: '11:00 AM',
+    price: 499,
+    birthDate: '',
+    birthTime: '',
+    birthPlace: ''
+  });
+  const [savedSessions, setSavedSessions] = useState<any[]>([]);
+  const [activeSession, setActiveSession] = useState<any | null>(null);
+  const [clientQuery, setClientQuery] = useState('');
+
+  useEffect(() => {
+    fetch('/api/guru/conversations')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setSavedSessions(data))
+      .catch(e => console.error(e));
+  }, []);
+
   const checkSmtpLiveStatus = async () => {
     setSmtpLiveStatus('Checking');
     setSmtpLiveError(null);
@@ -3612,20 +3638,6 @@ ${urls.map(url => `  <url>
 
           {/* TAB 11: BOOKINGS & CONSULTATIONS MANAGER */}
           {activeTab === 'bookings' && (() => {
-            const [showCreateForm, setShowCreateForm] = useState(false);
-            const [newBooking, setNewBooking] = useState({
-              customerName: '',
-              customerEmail: '',
-              customerPhone: '',
-              type: 'Career', // 'Career' | 'Marriage' | 'Spiritual' | 'Business'
-              serviceName: 'Kundli Guna Milan & Kundli Reading',
-              date: new Date().toISOString().split('T')[0],
-              time: '11:00 AM',
-              price: 499,
-              birthDate: '',
-              birthTime: '',
-              birthPlace: ''
-            });
 
             const handleCreateManualBooking = async (e: React.FormEvent) => {
               e.preventDefault();
@@ -3887,15 +3899,6 @@ ${urls.map(url => `  <url>
 
           {/* TAB 12: AI GURU COMPREHENSIVE SETTINGS */}
           {activeTab === 'ai_guru' && (() => {
-            const [savedSessions, setSavedSessions] = useState<any[]>([]);
-            const [activeSession, setActiveSession] = useState<any | null>(null);
-
-            useEffect(() => {
-              fetch('/api/guru/conversations')
-                .then(r => r.ok ? r.json() : [])
-                .then(data => setSavedSessions(data))
-                .catch(e => console.error(e));
-            }, []);
 
             return (
               <div className="space-y-6 max-w-5xl">
@@ -4163,7 +4166,6 @@ ${urls.map(url => `  <url>
 
           {/* TAB 15: SEEKERS & PORTAL REGISTRANTS */}
           {activeTab === 'users' && (() => {
-            const [clientQuery, setClientQuery] = useState('');
             const filteredSeekers = seekers.filter(s => 
               (s.name || '').toLowerCase().includes(clientQuery.toLowerCase()) ||
               (s.email || '').toLowerCase().includes(clientQuery.toLowerCase()) ||
