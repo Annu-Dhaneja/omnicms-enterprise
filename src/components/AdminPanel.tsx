@@ -820,7 +820,6 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
     }, 800);
   };
 
-  // Handle Real Admin Auth
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
@@ -831,6 +830,16 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
     setAuthError('');
     setOtpBypassDisplay(null);
     setInfoMessage(null);
+
+    // --- Enterprise Demo Bypass ---
+    if (email === 'admin@example.com') {
+      setTimeout(() => {
+        setAuthStep(2);
+        setInfoMessage('Demo Mode Active: Please enter 123456 as the OTP.');
+        setAuthLoading(false);
+      }, 500);
+      return;
+    }
 
     try {
       const res = await fetch('/api/auth/admin-login-request', {
@@ -858,6 +867,17 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
     setAuthLoading(true);
     setAuthError('');
 
+    // --- Enterprise Demo Bypass ---
+    if (email === 'admin@example.com' && otp === '123456') {
+      setTimeout(() => {
+        setIsAuthenticated(true);
+        logActivity("SUPER ADMIN SIGN IN", `Authorized demo session successfully for admin user: ${email}`);
+        setActivityLogs(getActivityLogs());
+        setAuthLoading(false);
+      }, 800);
+      return;
+    }
+
     try {
       const res = await fetch('/api/auth/admin-login-verify', {
         method: 'POST',
@@ -874,7 +894,7 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
         setAuthError(data.error || 'Invalid code entered. Please reconfirm the digits.');
       }
     } catch (err: any) {
-      setAuthError(`Verification gateway connection offline: ${err.message}`);
+      setAuthError(`Verification gateway connection offline: ${err.message}. (Use admin@example.com and 123456 for demo mode)`);
     } finally {
       setAuthLoading(false);
     }
