@@ -1190,7 +1190,7 @@ ${urls.map(url => `  <url>
      RENDER MASTER CMS DASHBOARD
      ============================================================ */
   return (
-    <div className="fixed inset-0 bg-[#080B12] z-[5000] overflow-y-auto text-left flex flex-col font-sans">
+    <div className="fixed inset-0 bg-[#080B12] z-[5000] overflow-hidden text-left flex flex-col font-sans">
       
       {/* Header bar */}
       <div className="bg-[#0a0e18] border-b border-white/5 px-8 py-4 flex items-center justify-between sticky top-0 z-50">
@@ -1214,10 +1214,10 @@ ${urls.map(url => `  <url>
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-[calc(100vh-73px)]">
+      <div className="flex flex-1 h-[calc(100vh-73px)] overflow-hidden">
         
         {/* Left Side Tab Navigation */}
-        <div className="w-64 bg-[#0a0e18]/60 border-r border-white/5 py-6 flex flex-col justify-between">
+        <div className="w-64 bg-[#0a0e18]/60 border-r border-white/5 py-6 flex flex-col justify-between overflow-y-auto">
           <div className="space-y-1">
             <div className="px-6 pb-2 text-[10px] text-[#596478] font-bold uppercase tracking-widest">Builder Tools</div>
             <button onClick={() => setActiveTab('content')} className={`w-full flex items-center gap-2.5 px-6 py-3.5 text-sm font-semibold border-l-4 transition-all ${activeTab === 'content' ? 'border-[#C9A227] text-[#C9A227] bg-[#C9A227]/5' : 'border-transparent text-[#8b96aa] hover:text-white hover:bg-white/5'}`}>
