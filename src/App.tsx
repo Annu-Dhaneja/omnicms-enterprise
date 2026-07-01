@@ -58,7 +58,9 @@ export default function App() {
 
   // Administrative State
   const [cmsData, setCmsData] = useState<BackupData>(() => getCMSData());
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(() => {
+    return window.location.pathname.toLowerCase().startsWith('/admin');
+  });
   const [selectedBookingService, setSelectedBookingService] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [socialLinks, setSocialLinks] = useState({
