@@ -4289,28 +4289,28 @@ Always start your consultations by acknowledging the planetary positions provide
                     />
                   </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
+                  <div className="overflow-x-auto w-full pb-2">
+                    <table className="w-full text-left min-w-[600px]">
                       <thead className="bg-[rgba(232,185,63,0.02)] border-b border-[var(--color-sls-line)]">
                         <tr>
-                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium">Seeker / Location</th>
-                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium">Contact Channel</th>
-                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium text-center">Security Status</th>
-                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium text-right">Joined Portal</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium whitespace-nowrap">Seeker / Location</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium whitespace-nowrap">Contact Channel</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium text-center whitespace-nowrap">Security Status</th>
+                          <th className="px-5 py-4 text-[11.5px] uppercase tracking-[0.05em] text-[var(--color-sls-muted)] font-medium text-right whitespace-nowrap">Joined Portal</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[var(--color-sls-line)]">
                         {filteredSeekers.map(s => (
                           <tr key={s.id} className="hover:bg-[rgba(232,185,63,0.03)] transition-colors">
-                            <td className="px-5 py-4 align-middle">
+                            <td className="px-5 py-4 align-middle whitespace-nowrap">
                               <div className="font-medium text-[var(--color-sls-ivory)]">{s.name}</div>
                               <div className="text-[12px] text-[var(--color-sls-muted)] mt-1 flex items-center gap-1">📍 {s.city || 'India'}</div>
                             </td>
-                            <td className="px-5 py-4 align-middle">
+                            <td className="px-5 py-4 align-middle whitespace-nowrap">
                               <div className="text-[13.5px] text-[var(--color-sls-ivory)]">{s.email}</div>
                               <div className="text-[12px] text-[var(--color-sls-muted)] mt-1">{s.phone || 'No phone registered'}</div>
                             </td>
-                            <td className="px-5 py-4 align-middle text-center">
+                            <td className="px-5 py-4 align-middle text-center whitespace-nowrap">
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11.5px] font-medium before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current ${
                                 s.verified 
                                   ? 'text-[#7BC98E] bg-[rgba(123,201,142,0.12)]' 
@@ -4319,7 +4319,7 @@ Always start your consultations by acknowledging the planetary positions provide
                                 {s.verified ? 'Verified' : 'Pending OTP verification'}
                               </span>
                             </td>
-                            <td className="px-5 py-4 align-middle text-right text-[13px] text-[var(--color-sls-muted)]">
+                            <td className="px-5 py-4 align-middle text-right text-[13px] text-[var(--color-sls-muted)] whitespace-nowrap">
                               {new Date(s.registeredDate || Date.now()).toLocaleDateString()}
                             </td>
                           </tr>
