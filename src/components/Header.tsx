@@ -77,7 +77,7 @@ export default function Header({
         {/* Logo */}
         <button className="flex items-center gap-3 shrink-0 text-left bg-transparent border-0 cursor-pointer p-0" onClick={() => handleNavClick('home')}>
           <div className="w-12 h-12 rounded-full border border-[#C9A227]/40 bg-black/40 overflow-hidden flex items-center justify-center shadow-[0_0_15px_rgba(201,162,39,0.25)] relative">
-            <img src="/favicon.svg" alt="Acharya TN Khurana Logo" className="w-11 h-11 object-contain" referrerPolicy="no-referrer" />
+            <img src="/favicon.jpg" alt="Acharya TN Khurana Logo" className="w-11 h-11 object-contain" referrerPolicy="no-referrer" />
             <div className="absolute -inset-1 rounded-full border border-[#C9A227]/20 animate-pulse opacity-30" />
           </div>
           <div className="leading-tight">

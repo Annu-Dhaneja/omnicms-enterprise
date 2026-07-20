@@ -351,7 +351,7 @@ export default function Auth({ onAuthSuccess, onCancel }: AuthProps) {
       <div className="text-center space-y-2 pt-2">
         <div className="w-20 h-20 rounded-full border border-[#C9A227]/30 bg-black/50 overflow-hidden flex items-center justify-center shadow-[0_0_25px_rgba(201,162,39,0.2)] mx-auto relative group">
           <img 
-            src="/favicon.svg" 
+            src="/favicon.jpg" 
             alt="Acharya TN Khurana Astrologer Logo" 
             className="w-18 h-18 object-contain transition-transform duration-700 group-hover:scale-110"
             referrerPolicy="no-referrer"

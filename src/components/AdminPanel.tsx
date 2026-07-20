@@ -1176,7 +1176,7 @@ ${urls.map(url => `  <url>
           <div className="text-center space-y-2">
             <div className="w-20 h-20 rounded-full border border-[#C9A227]/30 bg-black/50 overflow-hidden flex items-center justify-center shadow-[0_0_25px_rgba(201,162,39,0.25)] mx-auto relative group">
               <img 
-                src="/favicon.svg" 
+                src="/favicon.jpg" 
                 alt="Acharya TN Khurana Council Logo" 
                 className="w-18 h-18 object-contain transition-transform duration-700 group-hover:scale-110"
                 referrerPolicy="no-referrer"
