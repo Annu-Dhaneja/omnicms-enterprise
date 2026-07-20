@@ -50,12 +50,13 @@ import CheckoutPage from './components/CheckoutPage';
 import DashboardPage from './components/DashboardPage';
 import BlogPage from './components/BlogPage';
 import ToolkitPage from './components/ToolkitPage';
+import FeaturesServices from './components/FeaturesServices';
 
 export default function App() {
   // Routing State
   const [currentPage, setCurrentPage] = useState<PageId>(() => {
     const path = window.location.pathname.toLowerCase();
-    const validPages: PageId[] = ['home', 'about', 'services', 'books', 'blog', 'inquiry', 'cart', 'checkout', 'dashboard', 'contact', 'toolkit'];
+    const validPages: PageId[] = ['home', 'about', 'services', 'books', 'blog', 'inquiry', 'cart', 'checkout', 'dashboard', 'contact', 'toolkit', 'features-services'];
     const pathName = path.replace('/', '');
     if (validPages.includes(pathName as PageId)) {
       return pathName as PageId;
@@ -73,7 +74,7 @@ export default function App() {
         setIsAdminOpen(true);
       } else {
         setIsAdminOpen(false);
-        const validPages: PageId[] = ['home', 'about', 'services', 'books', 'blog', 'inquiry', 'cart', 'checkout', 'dashboard', 'contact', 'toolkit'];
+        const validPages: PageId[] = ['home', 'about', 'services', 'books', 'blog', 'inquiry', 'cart', 'checkout', 'dashboard', 'contact', 'toolkit', 'features-services'];
         const pathName = path.replace('/', '');
         if (validPages.includes(pathName as PageId)) {
           setCurrentPage(pathName as PageId);
@@ -548,6 +549,9 @@ export default function App() {
             onOpenBooking={(name) => setSelectedBookingService(name || '')}
           />
         );
+
+      case 'features-services':
+        return <FeaturesServices />;
 
       case 'home':
       default:

@@ -337,7 +337,8 @@ export type PageId =
   | 'cart'
   | 'checkout'
   | 'dashboard'
-  | 'toolkit';
+  | 'toolkit'
+  | 'features-services';
 
 export interface BackupData {
   version: string;
