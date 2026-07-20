@@ -97,7 +97,7 @@ export default function CartPage({
           onClick={onBackToStore}
           className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#C9A227] to-[#f0d070] text-[#1a1000] font-black text-xs hover:scale-105 transition-transform"
         >
-          探索 Library Store
+          Explore Library Store
         </button>
       </div>
     );

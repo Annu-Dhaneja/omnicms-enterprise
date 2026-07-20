@@ -37,6 +37,7 @@ export default function Header({
     { id: 'home', name: 'Home' },
     { id: 'about', name: 'About Biography' },
     { id: 'services', name: 'Services & Remedials' },
+    { id: 'features-services', name: 'Tax & Astro Suite' },
     { id: 'toolkit', name: 'Vedic Toolkit' },
     { id: 'books', name: 'Book Store' },
     { id: 'blog', name: 'Transit Blog' },

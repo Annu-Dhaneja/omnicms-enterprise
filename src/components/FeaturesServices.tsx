@@ -29,7 +29,7 @@ export default function FeaturesServices() {
   };
 
   return (
-    <div className="fs-root">
+    <div className="fs-root pt-28 pb-16">
       <div className="fs-bg-glow"></div>
       <div className="fs-sparkles">
         {sparkles.map(s => (
@@ -45,22 +45,7 @@ export default function FeaturesServices() {
         ))}
       </div>
 
-      <nav className="fs-nav">
-        <div className="fs-brand">
-          <svg className="fs-mark" viewBox="0 0 40 40">
-            <circle cx="20" cy="20" r="18" fill="none" stroke="#d4af37" strokeWidth="1.5"/>
-            <text x="20" y="26" textAnchor="middle" fontSize="16" fill="#f5da7a" fontFamily="Cinzel">₹</text>
-          </svg>
-          <span>TAX &amp; ASTRO SUITE</span>
-        </div>
-        <div className="fs-nav-links">
-          <a href="#features">Features</a>
-          <a href="#services">Services</a>
-          <a href="#pricing-itr">ITR &amp; GST</a>
-          <a href="#pricing-astro">Astrology</a>
-        </div>
-        <a href="#services" className="fs-nav-cta">Book Now</a>
-      </nav>
+
 
       <section className="fs-hero">
         <div className="fs-eyebrow">Features &amp; Services</div>
@@ -115,7 +100,7 @@ export default function FeaturesServices() {
             <div className="fs-svc-desc">A quick discovery call to understand your tax situation and next steps.</div>
             <div className="fs-svc-actions">
               <button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button>
-              <button className="fs-mini-btn">Inquiry Now</button>
+              <a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a>
             </div>
           </div>
           <div className="fs-svc-card">
@@ -124,7 +109,7 @@ export default function FeaturesServices() {
             <div className="fs-svc-desc">Ask one focused question and receive guidance from our astrologer.</div>
             <div className="fs-svc-actions">
               <button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button>
-              <button className="fs-mini-btn">Inquiry Now</button>
+              <a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a>
             </div>
           </div>
         </div>
@@ -136,21 +121,21 @@ export default function FeaturesServices() {
             <div className="fs-svc-name">ITR-1</div>
             <div className="fs-svc-desc">For salaried individuals with simple income sources.</div>
             <div className="fs-svc-price">₹999</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
           <div className="fs-svc-card">
             <div className="fs-svc-top"><span className="fs-svc-icon">📌</span></div>
             <div className="fs-svc-name">ITR-2, 3 &amp; 4</div>
             <div className="fs-svc-desc">For capital gains, business income, and presumptive taxation cases.</div>
             <div className="fs-svc-price">₹1499</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
           <div className="fs-svc-card">
             <div className="fs-svc-top"><span className="fs-svc-icon">📌</span></div>
             <div className="fs-svc-name">ITR-4, 5, 6, 7 &amp; 8</div>
             <div className="fs-svc-desc">For firms, LLPs, companies, and trusts with complex filings.</div>
             <div className="fs-svc-price">Starting ₹2999</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
         </div>
 
@@ -161,28 +146,28 @@ export default function FeaturesServices() {
             <div className="fs-svc-name">GST Monthly Filing</div>
             <div className="fs-svc-desc">Routine monthly GSTR filing for regular taxpayers.</div>
             <div className="fs-svc-price">₹999</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
           <div className="fs-svc-card">
             <div className="fs-svc-top"><span className="fs-svc-icon">📌</span></div>
             <div className="fs-svc-name">GST Quarterly Filing</div>
             <div className="fs-svc-desc">Quarterly return filing under the QRMP scheme.</div>
             <div className="fs-svc-price">₹2199</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
           <div className="fs-svc-card">
             <div className="fs-svc-top"><span className="fs-svc-icon">📌</span></div>
             <div className="fs-svc-name">Annual GSTR-4</div>
             <div className="fs-svc-desc">Annual return filing for composition scheme taxpayers.</div>
             <div className="fs-svc-price">₹3999</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
           <div className="fs-svc-card">
             <div className="fs-svc-top"><span className="fs-svc-icon">📌</span></div>
             <div className="fs-svc-name">Annual GSTR-9</div>
             <div className="fs-svc-desc">Comprehensive annual return filing for regular taxpayers.</div>
             <div className="fs-svc-price">₹9999</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
         </div>
 
@@ -193,14 +178,14 @@ export default function FeaturesServices() {
             <div className="fs-svc-name">Astrology Zoom · 30 Minutes</div>
             <div className="fs-svc-desc">A focused video consultation covering key life questions.</div>
             <div className="fs-svc-price">₹1999</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
           <div className="fs-svc-card">
             <div className="fs-svc-top"><span className="fs-svc-icon">📌</span></div>
             <div className="fs-svc-name">Astrology Zoom · 60 Minutes</div>
             <div className="fs-svc-desc">An in-depth reading with detailed guidance and remedies.</div>
             <div className="fs-svc-price">₹3599</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
         </div>
 
@@ -211,21 +196,21 @@ export default function FeaturesServices() {
             <div className="fs-svc-name">Personal Consultation · 15 Minutes</div>
             <div className="fs-svc-desc">A short in-person or call-based session for quick queries.</div>
             <div className="fs-svc-price">₹1099</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
           <div className="fs-svc-card">
             <div className="fs-svc-top"><span className="fs-svc-icon">📌</span></div>
             <div className="fs-svc-name">Personal Consultation · 30 Minutes</div>
             <div className="fs-svc-desc">A standard session covering multiple topics in depth.</div>
             <div className="fs-svc-price">₹2099</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
           <div className="fs-svc-card">
             <div className="fs-svc-top"><span className="fs-svc-icon">📌</span></div>
             <div className="fs-svc-name">Personal Consultation · 60 Minutes</div>
             <div className="fs-svc-desc">A comprehensive session for detailed planning and advice.</div>
             <div className="fs-svc-price">₹3999</div>
-            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><button className="fs-mini-btn">Inquiry Now</button></div>
+            <div className="fs-svc-actions"><button className="fs-mini-btn fs-solid" onClick={handleAddToCart}>Add to Cart</button><a href="/inquiry" className="fs-mini-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Inquiry Now</a></div>
           </div>
         </div>
       </section>
@@ -236,10 +221,7 @@ export default function FeaturesServices() {
         <a href="#services" className="fs-btn-primary">Book Your Service Today</a>
       </div>
 
-      <footer className="fs-footer">
-        <div className="fs-tag">TAXATION • GST • ITR FILING • ASTROLOGY CONSULTATION</div>
-        <div style={{ marginTop: '8px' }}>© 2026 — Built with GurucraftPro design system.</div>
-      </footer>
+
     </div>
   );
 }
