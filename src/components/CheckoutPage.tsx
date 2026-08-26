@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, ShieldCheck, Mail, Pin, Phone, MapPin, Truck, Landmark } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ShieldCheck, Mail, Pin, Phone, MapPin, Truck, Landmark, CreditCard } from 'lucide-react';
 import { Book, Order } from '../types';
 import { logActivity } from '../utils';
+
+declare global {
+  interface Window { Razorpay?: any; }
+}
 
 interface CheckoutPageProps {
   cart: { bookId: string; quantity: number }[];
@@ -23,7 +27,8 @@ export default function CheckoutPage({
   const [landmark, setLandmark] = useState('');
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
-  const [paymentMode, setPaymentMode] = useState('cod'); // cod or upi or bank
+  const [paymentMode, setPaymentMode] = useState('razorpay'); // razorpay, cod, upi or bank
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
@@ -65,25 +70,37 @@ export default function CheckoutPage({
     }
   }, [cart, books]);
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !phone || !address || !pincode) {
-      alert("Please provide all required shipping parameters.");
-      return;
-    }
+  useEffect(() => {
+    if (document.querySelector('script[data-razorpay-checkout]')) return;
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.dataset.razorpayCheckout = 'true';
+    document.body.appendChild(script);
+    return () => { script.remove(); };
+  }, []);
 
-    // Capture items
+  const getCustomerPayload = () => ({
+    name,
+    phone,
+    email: email || 'tracker@spiritual.com',
+    address,
+    landmark,
+    city,
+    pincode
+  });
+
+  const createLocalOrder = (): Order => {
     const invoiceItems = cart.map(item => {
       const book = books.find(b => b.id === item.bookId);
       return {
         bookId: item.bookId,
-        title: book?.title || "Unified Astro Manuscript",
+        title: book?.title || 'Unified Astro Manuscript',
         price: book ? (book.salePrice || book.price) : 0,
         quantity: item.quantity
       };
     });
-
-    const newOrder: Order = {
+    return {
       id: `order_${Date.now()}`,
       invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
       customerName: name,
@@ -93,20 +110,118 @@ export default function CheckoutPage({
       items: invoiceItems,
       subtotal: activeSummary.subtotal,
       discountAmount: activeSummary.couponRebate,
-      couponUsed: activeSummary.couponCode,
+      couponUsed: activeSummary.couponCode || undefined,
       total: activeSummary.grandTotal,
       status: 'Pending',
+      paymentMethod: paymentMode === 'upi' ? 'UPI' : paymentMode === 'bank' ? 'Bank Transfer' : 'COD',
+      paymentStatus: 'unpaid',
       createdAt: new Date().toISOString()
     };
+  };
 
+  const handleRazorpayPayment = async () => {
+    setPaymentLoading(true);
+    try {
+      if (!window.Razorpay) {
+        await new Promise<void>((resolve, reject) => {
+          const existing = document.querySelector('script[data-razorpay-checkout]') as HTMLScriptElement | null;
+          if (!existing) return reject(new Error('Razorpay Checkout could not be loaded.'));
+          const timer = window.setInterval(() => {
+            if (window.Razorpay) { window.clearInterval(timer); resolve(); }
+          }, 100);
+          window.setTimeout(() => { window.clearInterval(timer); reject(new Error('Razorpay Checkout load timed out.')); }, 10000);
+        });
+      }
+
+      const createResponse = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart,
+          couponCode: activeSummary.couponCode || undefined,
+          customer: getCustomerPayload()
+        })
+      });
+      const created = await createResponse.json();
+      if (!createResponse.ok) throw new Error(created.error || 'Unable to create payment order.');
+
+      const options = {
+        key: created.keyId,
+        amount: created.amount,
+        currency: created.currency || 'INR',
+        name: 'Acharya TN Khurana',
+        description: 'Secure Book Order',
+        order_id: created.razorpayOrderId,
+        prefill: {
+          name,
+          email: email || 'tracker@spiritual.com',
+          contact: phone
+        },
+        notes: { internalOrderId: created.internalOrderId },
+        theme: { color: '#C9A227' },
+        modal: {
+          ondismiss: () => setPaymentLoading(false)
+        },
+        handler: async (response: any) => {
+          try {
+            const verifyResponse = await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                internalOrderId: created.internalOrderId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+            const verified = await verifyResponse.json();
+            if (!verifyResponse.ok || !verified.success) throw new Error(verified.error || 'Payment verification failed.');
+            const paidOrder: Order = {
+              ...verified.order,
+              paymentMethod: 'Razorpay',
+              paymentStatus: 'paid'
+            };
+            setPlacedOrder(paidOrder);
+            setSuccess(true);
+            localStorage.removeItem('acharya_active_summary');
+            logActivity('RAZORPAY PAYMENT VERIFIED', `Verified order ${paidOrder.id} for ₹${paidOrder.total} from ${paidOrder.customerName}`);
+            onOrderCompleted(paidOrder);
+          } catch (err: any) {
+            alert(err.message || 'Payment completed but verification failed. Please contact support.');
+          } finally {
+            setPaymentLoading(false);
+          }
+        }
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.on('payment.failed', (response: any) => {
+        setPaymentLoading(false);
+        alert(response?.error?.description || 'Razorpay payment failed. Please try again.');
+      });
+      razorpay.open();
+    } catch (err: any) {
+      setPaymentLoading(false);
+      alert(err.message || 'Unable to start Razorpay checkout.');
+    }
+  };
+
+  const handleSubmitOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !phone || !address || !pincode) {
+      alert('Please provide all required shipping parameters.');
+      return;
+    }
+    if (paymentMode === 'razorpay') {
+      await handleRazorpayPayment();
+      return;
+    }
+
+    const newOrder = createLocalOrder();
     setPlacedOrder(newOrder);
     setSuccess(true);
-    logActivity("SECURED ORDER RECORDED", `Recorded Order ID: ${newOrder.id} for seeker: ${name} (Amount: ₹${newOrder.total})`);
-    
-    // Clear the active sum
+    logActivity('SECURED ORDER RECORDED', `Recorded Order ID: ${newOrder.id} for seeker: ${name} (Amount: ₹${newOrder.total})`);
     localStorage.removeItem('acharya_active_summary');
-    
-    // Complete callback which will clear the parent cart and push this order to state or persistent db
     onOrderCompleted(newOrder);
   };
 
@@ -296,8 +411,20 @@ export default function CheckoutPage({
             <div className="space-y-4 pt-4">
               <h3 className="font-serif font-black text-white border-b border-white/5 pb-2">Sacred Settlement Instruments</h3>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div 
+                  onClick={() => setPaymentMode('razorpay')}
+                  className={`p-4 rounded-xl border cursor-pointer text-left transition-all relative ${
+                    paymentMode === 'razorpay' ? 'border-[#C9A227] bg-[#C9A227]/5' : 'border-white/5 bg-white/[0.01]'
+                  }`}
+                >
+                  <input type="radio" checked={paymentMode === 'razorpay'} readOnly className="absolute top-3 right-3 text-[#C9A227]" />
+                  <CreditCard className="w-5 h-5 text-[#C9A227] mb-2" />
+                  <span className="font-bold text-white block mb-1">Razorpay Secure</span>
+                  <span className="text-[10px] text-[#8b96aa] leading-normal block">UPI, cards, net banking & wallets.</span>
+                </div>
+
+              <div 
                   onClick={() => setPaymentMode('cod')}
                   className={`p-4 rounded-xl border cursor-pointer text-left transition-all relative ${
                     paymentMode === 'cod' ? 'border-[#C9A227] bg-[#C9A227]/5' : 'border-white/5 bg-white/[0.01]'
@@ -334,9 +461,11 @@ export default function CheckoutPage({
 
             <button 
               type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-[#C9A227] to-[#f0d070] text-[#1a1000] font-black rounded-xl text-xs hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 cursor-pointer mt-6"
+              disabled={paymentLoading}
+              className="w-full h-12 bg-gradient-to-r from-[#C9A227] to-[#f0d070] text-[#1a1000] font-black rounded-xl text-xs hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 cursor-pointer mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <ShieldCheck className="w-4 h-4" /> Submit Secured Order (₹{activeSummary.grandTotal})
+              <ShieldCheck className="w-4 h-4" />
+              {paymentLoading ? 'Opening Secure Payment…' : paymentMode === 'razorpay' ? `Pay Securely with Razorpay (₹${activeSummary.grandTotal})` : `Submit Secured Order (₹${activeSummary.grandTotal})`}
             </button>
           </form>
         </div>

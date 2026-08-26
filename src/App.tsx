@@ -349,14 +349,17 @@ export default function App() {
   };
 
   const handleOrderCompleted = async (newOrder: Order) => {
-    // Attempt real database order log
-    try {
-      await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newOrder)
-      });
-    } catch {}
+    // Razorpay orders are already persisted and stock is decremented only after server-side verification.
+    // COD/UPI/Bank orders still use the existing order endpoint.
+    if (newOrder.paymentStatus !== 'paid') {
+      try {
+        await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newOrder)
+        });
+      } catch {}
+    }
 
     const updatedOrders = [newOrder, ...(cmsData.orders || [])];
     handleSaveCMS({ ...cmsData, orders: updatedOrders });

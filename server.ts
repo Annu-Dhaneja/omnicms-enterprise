@@ -57,6 +57,12 @@ interface Order {
   couponUsed?: string;
   status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled';
   trackingNumber?: string;
+  paymentMethod?: 'COD' | 'UPI' | 'Bank Transfer' | 'Razorpay';
+  paymentStatus?: 'unpaid' | 'created' | 'paid' | 'failed' | 'refunded';
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  processedPaymentEventIds?: string[];
   createdAt: string;
 }
 
@@ -876,11 +882,251 @@ function defineRoutes() {
   };
 
   // Global parse parsers
+  // Razorpay webhook needs the exact raw request bytes for HMAC verification.
+  app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
   app.use(express.json());
 
   // API Route: Live server checking
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', online: true });
+  });
+
+  // ==========================================================
+  // RAZORPAY PAYMENTS (BOOKSTORE)
+  // ==========================================================
+  const razorpayKeyId = process.env.RAZORPAY_KEY_ID || '';
+  const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || '';
+  const razorpayWebhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
+
+  const razorpayRequest = async (method: string, endpoint: string, body?: any) => {
+    if (!razorpayKeyId || !razorpayKeySecret) {
+      throw new Error('Razorpay server credentials are not configured.');
+    }
+    const auth = Buffer.from(`${razorpayKeyId}:${razorpayKeySecret}`).toString('base64');
+    const response = await fetch(`https://api.razorpay.com/v1${endpoint}`, {
+      method,
+      headers: {
+        Authorization: `Basic ${auth}`,
+        ...(body ? { 'Content-Type': 'application/json' } : {})
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data?.error?.description || `Razorpay API error (${response.status})`);
+    }
+    return data;
+  };
+
+  const safeEqualHex = (expected: string, actual: string) => {
+    const a = Buffer.from(expected, 'utf8');
+    const b = Buffer.from(actual, 'utf8');
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  };
+
+  const calculateBookCheckout = (db: any, items: any[], couponCode?: string) => {
+    if (!Array.isArray(items) || items.length === 0 || items.length > 50) {
+      throw new Error('Cart is empty or invalid.');
+    }
+    const normalized = items.map((raw: any) => {
+      const bookId = String(raw?.bookId || '');
+      const quantity = Number(raw?.quantity);
+      if (!bookId || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
+        throw new Error('Invalid cart item.');
+      }
+      const book = (db.books || []).find((b: any) => b.id === bookId);
+      if (!book) throw new Error('One or more books are no longer available.');
+      if (book.stock < quantity) throw new Error(`Insufficient stock for ${book.title}.`);
+      const price = Number(book.salePrice ?? book.price);
+      if (!Number.isFinite(price) || price <= 0) throw new Error(`Invalid price for ${book.title}.`);
+      return { book, bookId, quantity, price };
+    });
+
+    const subtotal = Math.round(normalized.reduce((sum: number, x: any) => sum + x.price * x.quantity, 0));
+    let discountAmount = 0;
+    let normalizedCoupon = '';
+    if (couponCode) {
+      const coupon = (db.coupons || []).find((c: any) => c.active && String(c.code).toLowerCase() === String(couponCode).trim().toLowerCase());
+      if (!coupon) throw new Error('Invalid or expired coupon code.');
+      normalizedCoupon = coupon.code;
+      discountAmount = coupon.discountType === 'percentage'
+        ? Math.round(subtotal * Number(coupon.value) / 100)
+        : Math.round(Number(coupon.value));
+      discountAmount = Math.max(0, Math.min(discountAmount, subtotal));
+    }
+    const taxation = Math.round((subtotal - discountAmount) * 0.05);
+    const shipping = subtotal > 1000 || subtotal === 0 ? 0 : 60;
+    const total = Math.max(0, subtotal - discountAmount + taxation + shipping);
+    if (total <= 0) throw new Error('Invalid final amount.');
+
+    return {
+      items: normalized.map((x: any) => ({ bookId: x.bookId, title: x.book.title, quantity: x.quantity, price: x.price })),
+      subtotal, discountAmount, couponUsed: normalizedCoupon, taxation, shipping, total
+    };
+  };
+
+  const finalizeCapturedBookPayment = (db: any, order: any, payment: any) => {
+    if (order.paymentStatus === 'paid') return order;
+    const expectedPaise = Math.round(Number(order.total) * 100);
+    if (Number(payment.amount) !== expectedPaise || String(payment.currency) !== 'INR') {
+      throw new Error('Payment amount or currency does not match the order.');
+    }
+    if (payment.status !== 'captured') {
+      throw new Error('Payment is not captured yet.');
+    }
+
+    // Stock is decremented exactly once, at verified payment time—not when the Razorpay order is merely created.
+    (order.items || []).forEach((item: any) => {
+      const book = (db.books || []).find((b: any) => b.id === item.bookId);
+      if (book) {
+        book.stock = Math.max(0, book.stock - item.quantity);
+        book.status = book.stock > 0 ? 'Available' : 'Out of Stock';
+      }
+    });
+
+    order.paymentStatus = 'paid';
+    order.paymentMethod = 'Razorpay';
+    order.razorpayPaymentId = payment.id;
+    order.status = 'Pending';
+    if (order.customerEmail) {
+      if (!db.customers) db.customers = [];
+      const exists = db.customers.find((c: any) => String(c.email).toLowerCase() === String(order.customerEmail).toLowerCase());
+      if (!exists) db.customers.push({ id: `cust_${Date.now()}`, name: order.customerName, phone: order.customerPhone, email: order.customerEmail, address: order.customerAddress, createdAt: new Date().toISOString() });
+    }
+    createNotification(db, 'Payment Received Successfully', `Razorpay payment of ₹${order.total} from ${order.customerName} for invoice ${order.invoiceNumber}.`, 'Payment');
+    createNotification(db, 'New Paid Book Order', `Paid order ${order.invoiceNumber} for ₹${order.total} is ready for fulfillment.`, 'Order');
+    return order;
+  };
+
+  app.post('/api/payments/create-order', async (req, res) => {
+    try {
+      const db = readDB();
+      const { items, couponCode, customer } = req.body || {};
+      const checkout = calculateBookCheckout(db, items, couponCode);
+      if (!customer?.name || !customer?.phone || !customer?.address || !customer?.pincode) {
+        return res.status(400).json({ error: 'Complete shipping details are required.' });
+      }
+      const internalId = `ord_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
+      const order: any = {
+        id: internalId,
+        invoiceNumber,
+        customerName: String(customer.name).trim(),
+        customerPhone: String(customer.phone).trim(),
+        customerEmail: String(customer.email || 'tracker@spiritual.com').trim(),
+        customerAddress: `${String(customer.address).trim()}, Landmark: ${String(customer.landmark || 'None').trim()}, ${String(customer.city || '').trim()}, PIN: ${String(customer.pincode).trim()}`,
+        items: checkout.items,
+        subtotal: checkout.subtotal,
+        discountAmount: checkout.discountAmount,
+        couponUsed: checkout.couponUsed || undefined,
+        total: checkout.total,
+        status: 'Pending',
+        paymentMethod: 'Razorpay',
+        paymentStatus: 'created',
+        createdAt: new Date().toISOString(),
+        processedPaymentEventIds: []
+      };
+
+      const dbOrder = { ...order };
+      if (!db.orders) db.orders = [];
+      db.orders.unshift(dbOrder);
+      writeDB(db);
+
+      try {
+        const rpOrder = await razorpayRequest('POST', '/orders', {
+          amount: Math.round(checkout.total * 100),
+          currency: 'INR',
+          receipt: invoiceNumber,
+          notes: { internalOrderId: internalId }
+        });
+        const latest = readDB();
+        const idx = (latest.orders || []).findIndex((o: any) => o.id === internalId);
+        if (idx >= 0) {
+          latest.orders[idx].razorpayOrderId = rpOrder.id;
+          writeDB(latest);
+        }
+        return res.json({
+          internalOrderId: internalId,
+          razorpayOrderId: rpOrder.id,
+          amount: rpOrder.amount,
+          currency: rpOrder.currency,
+          keyId: razorpayKeyId,
+          order: { ...order, razorpayOrderId: rpOrder.id },
+          summary: { subtotal: checkout.subtotal, discountAmount: checkout.discountAmount, taxation: checkout.taxation, shipping: checkout.shipping, total: checkout.total }
+        });
+      } catch (gatewayError: any) {
+        const latest = readDB();
+        latest.orders = (latest.orders || []).filter((o: any) => o.id !== internalId);
+        writeDB(latest);
+        throw gatewayError;
+      }
+    } catch (err: any) {
+      console.error('[razorpay/create-order]', err);
+      return res.status(400).json({ error: err.message || 'Unable to create Razorpay order.' });
+    }
+  });
+
+  app.post('/api/payments/verify', async (req, res) => {
+    try {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, internalOrderId } = req.body || {};
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !internalOrderId) {
+        return res.status(400).json({ error: 'Missing payment verification fields.' });
+      }
+      if (!razorpayKeySecret) return res.status(500).json({ error: 'Razorpay secret is not configured.' });
+      const expected = crypto.createHmac('sha256', razorpayKeySecret).update(`${razorpay_order_id}|${razorpay_payment_id}`).digest('hex');
+      if (!safeEqualHex(expected, String(razorpay_signature))) return res.status(400).json({ error: 'Invalid Razorpay signature.' });
+
+      const db = readDB();
+      const idx = (db.orders || []).findIndex((o: any) => o.id === internalOrderId && o.razorpayOrderId === razorpay_order_id);
+      if (idx < 0) return res.status(404).json({ error: 'Order not found.' });
+      const order = db.orders[idx];
+      if (order.paymentStatus === 'paid') return res.json({ success: true, order });
+
+      const payment = await razorpayRequest('GET', `/payments/${encodeURIComponent(razorpay_payment_id)}`);
+      const updated = finalizeCapturedBookPayment(db, order, payment);
+      db.orders[idx] = updated;
+      writeDB(db);
+      return res.json({ success: true, order: updated });
+    } catch (err: any) {
+      console.error('[razorpay/verify]', err);
+      return res.status(400).json({ error: err.message || 'Payment verification failed.' });
+    }
+  });
+
+  app.post('/api/payments/webhook', (req, res) => {
+    try {
+      if (!razorpayWebhookSecret) return res.status(500).json({ error: 'Razorpay webhook secret is not configured.' });
+      const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body || {}));
+      const signature = String(req.headers['x-razorpay-signature'] || '');
+      const expected = crypto.createHmac('sha256', razorpayWebhookSecret).update(rawBody).digest('hex');
+      if (!safeEqualHex(expected, signature)) return res.status(400).json({ error: 'Invalid webhook signature.' });
+
+      const eventId = String(req.headers['x-razorpay-event-id'] || '');
+      const event = JSON.parse(rawBody.toString('utf8'));
+      const db = readDB();
+      const entity = event?.payload?.payment?.entity;
+      const orderId = entity?.order_id;
+      const idx = orderId ? (db.orders || []).findIndex((o: any) => o.razorpayOrderId === orderId) : -1;
+      if (idx < 0) return res.json({ received: true });
+      const order = db.orders[idx];
+      if (eventId && Array.isArray(order.processedPaymentEventIds) && order.processedPaymentEventIds.includes(eventId)) return res.json({ received: true });
+      if (!Array.isArray(order.processedPaymentEventIds)) order.processedPaymentEventIds = [];
+      if (eventId) order.processedPaymentEventIds.push(eventId);
+
+      if (event.event === 'payment.captured') {
+        if (order.paymentStatus !== 'paid') finalizeCapturedBookPayment(db, order, entity);
+      } else if (event.event === 'payment.failed') {
+        if (order.paymentStatus !== 'paid') order.paymentStatus = 'failed';
+      } else if (event.event === 'refund.processed') {
+        order.paymentStatus = 'refunded';
+      }
+      db.orders[idx] = order;
+      writeDB(db);
+      return res.json({ received: true });
+    } catch (err: any) {
+      console.error('[razorpay/webhook]', err);
+      return res.status(500).json({ error: 'Webhook processing failed.' });
+    }
   });
 
   // ==========================================================

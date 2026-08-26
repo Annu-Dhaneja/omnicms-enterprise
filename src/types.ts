@@ -321,6 +321,11 @@ export interface Order {
   couponUsed?: string;
   status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled';
   trackingNumber?: string;
+  paymentMethod?: 'COD' | 'UPI' | 'Bank Transfer' | 'Razorpay';
+  paymentStatus?: 'unpaid' | 'created' | 'paid' | 'failed' | 'refunded';
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
   createdAt: string;
 }
 
