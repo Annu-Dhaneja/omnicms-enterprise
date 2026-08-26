@@ -1,0 +1,13 @@
+{
+  "name": "acharya-khurana-razorpay-integration",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure server-side Razorpay integration (order creation, signature verification, webhooks) for the existing Acharya Khurana platform.",
+  "dependencies": {
+    "razorpay": "^2.9.4",
+    "mongoose": "^8.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

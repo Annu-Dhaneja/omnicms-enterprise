@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+  checkout-demo.html — REFERENCE ONLY.
+
+  This shows how checkout-widget.js wires into a page. It is deliberately
+  unstyled so it doesn't fight with your existing site's CSS — copy the
+  <button>/<div> markup and script wiring into your real order-summary
+  page, keeping your existing theme, layout, and components.
+
+  Security note: this HTML file holds NO secrets. The public key it uses
+  comes back from /api/payments/create-order at request time; the real
+  security boundary is the three files in /api/payments/, which run on
+  the server and are never sent to the browser.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Checkout — reference wiring</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="/checkout-widget.js"></script>
+</head>
+<body>
+  <div id="order-summary">
+    <!-- Replace with your real order summary markup / component -->
+    <p>Service: <span id="product-name">30-min Vedic Consultation</span></p>
+    <label>Coupon code: <input id="coupon-input" type="text" placeholder="Optional" /></label>
+  </div>
+
+  <button id="pay-now-btn">Pay Now</button>
+  <p id="payment-status"></p>
+
+  <script>
+    initAcharyaKhuranaCheckout({
+      buttonEl: document.getElementById('pay-now-btn'),
+      productOrServiceId: 'consult_30min', // real ID from your catalog
+      quantity: 1,
+      getCouponCode: () => document.getElementById('coupon-input').value || null,
+      onSuccess: (result) => {
+        document.getElementById('payment-status').textContent =
+          `Payment successful. Order ${result.internalOrderId}.`;
+        // In production: redirect to a real receipt/confirmation page.
+        // window.location.href = `/orders/${result.internalOrderId}`;
+      },
+      onFailure: (message) => {
+        document.getElementById('payment-status').textContent = `Payment failed: ${message}`;
+      },
+    });
+  </script>
+</body>
+</html>
