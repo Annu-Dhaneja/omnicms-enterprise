@@ -1,4 +1,9 @@
-import { initializeApp, getApp, getApps } from "firebase/app";
+import {
+  initializeApp,
+  getApp,
+  getApps,
+} from "firebase/app";
+
 import {
   getAuth,
   signInWithPopup,
@@ -6,19 +11,24 @@ import {
   signOut,
   User,
 } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+
+import {
+  getFirestore,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  messagingSenderId:
+    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
+  measurementId:
+    import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
 };
 
-let app: any = null;
+let app: any;
 let db: any = null;
 let auth: any = null;
 let isFirebaseReady = false;
@@ -26,30 +36,34 @@ let firebaseConfigError: string | null = null;
 
 if (firebaseConfig.apiKey && firebaseConfig.projectId) {
   try {
-    app = getApps().length === 0
-      ? initializeApp(firebaseConfig)
-      : getApp();
+    app =
+      getApps().length === 0
+        ? initializeApp(firebaseConfig)
+        : getApp();
 
     db = getFirestore(app);
     auth = getAuth(app);
+
     isFirebaseReady = true;
 
     console.log(
-      "Firebase initialized:",
+      "Firebase initialized successfully:",
       firebaseConfig.projectId
     );
   } catch (error) {
     firebaseConfigError =
-      error instanceof Error ? error.message : String(error);
+      error instanceof Error
+        ? error.message
+        : String(error);
 
     console.error(
-      "Firebase initialization failed:",
+      "Failed to initialize Firebase:",
       error
     );
   }
 } else {
   firebaseConfigError =
-    "Firebase environment variables are missing.";
+    "Missing Firebase environment variables.";
 
   console.error(firebaseConfigError);
 }
@@ -133,29 +147,20 @@ export function handleFirestoreError(
 
 export async function logInWithGoogle() {
   if (!isFirebaseReady || !auth) {
-    const mockUser = {
-      uid: "mock_super_admin_667",
-      email: "admin@example.com",
-      displayName: "Seeker Admin",
-      emailVerified: true,
-      role: "Super Admin",
-    };
-
-    localStorage.setItem(
-      "acharya_mock_admin_user",
-      JSON.stringify(mockUser)
+    throw new Error(
+      "Firebase is not configured. Please check VITE_FIREBASE environment variables."
     );
-
-    return mockUser;
   }
 
   try {
-    const provider = new GoogleAuthProvider();
+    const provider =
+      new GoogleAuthProvider();
 
-    const result = await signInWithPopup(
-      auth,
-      provider
-    );
+    const result =
+      await signInWithPopup(
+        auth,
+        provider
+      );
 
     return result.user;
   } catch (error) {
@@ -169,10 +174,6 @@ export async function logInWithGoogle() {
 }
 
 export async function logOutUser() {
-  localStorage.removeItem(
-    "acharya_mock_admin_user"
-  );
-
   if (!isFirebaseReady || !auth) {
     return;
   }
