@@ -1,0 +1,621 @@
+diff --git a/.env.example b/.env.example
+index 7a550fe..e106fa8 100644
+--- a/.env.example
++++ b/.env.example
+@@ -7,3 +7,11 @@ GEMINI_API_KEY="MY_GEMINI_API_KEY"
+ # AI Studio automatically injects this at runtime with the Cloud Run service URL.
+ # Used for self-referential links, OAuth callbacks, and API endpoints.
+ APP_URL="MY_APP_URL"
++
++# JWT_SECRET: Server-side only secret used to sign/verify the admin session
++# cookie for /api/admin/* endpoints. Generate with e.g.:
++#   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
++# NEVER prefix this with VITE_ or NEXT_PUBLIC_ — it must never reach the
++# frontend bundle. Set the real value only in Vercel's server environment
++# variables, never in a committed .env file.
++JWT_SECRET="MY_JWT_SECRET"
+diff --git a/package.json b/package.json
+index 198ab32..bf2a9cf 100644
+--- a/package.json
++++ b/package.json
+@@ -16,9 +16,12 @@
+     "@tailwindcss/vite": "^4.1.14",
+     "@types/nodemailer": "^8.0.0",
+     "@vitejs/plugin-react": "^5.0.4",
++    "cookie-parser": "^1.4.7",
+     "dotenv": "^17.2.3",
+     "express": "^4.21.2",
++    "express-rate-limit": "^8.7.0",
+     "firebase": "^12.14.0",
++    "jsonwebtoken": "^9.0.3",
+     "lucide-react": "^0.546.0",
+     "motion": "^12.23.24",
+     "nodemailer": "^8.0.10",
+@@ -28,7 +31,9 @@
+     "vite": "^6.2.3"
+   },
+   "devDependencies": {
++    "@types/cookie-parser": "^1.4.10",
+     "@types/express": "^4.17.21",
++    "@types/jsonwebtoken": "^9.0.10",
+     "@types/node": "^22.14.0",
+     "autoprefixer": "^10.4.21",
+     "esbuild": "^0.25.0",
+diff --git a/server.ts b/server.ts
+index a53d1dd..3e0a0a7 100644
+--- a/server.ts
++++ b/server.ts
+@@ -691,11 +691,89 @@ class GoogleGenerativeAI {
+ 
+ import dotenv from 'dotenv';
+ import nodemailer from 'nodemailer';
++import jwt from 'jsonwebtoken';
++import cookieParser from 'cookie-parser';
++import rateLimit from 'express-rate-limit';
+ 
+ 
+ // Load environment variables
+ dotenv.config();
+ 
++// ===========================================================================
++// JWT admin authentication
++// ---------------------------------------------------------------------------
++// Firebase Authentication (Google sign-in) already exists on the frontend
++// for the public site, but the /api/admin/* Express endpoints below had NO
++// server-side authorization check at all — any client that knew (or
++// guessed) a URL could call them directly, regardless of whether the
++// frontend "believed" it was logged in. The existing admin login flow
++// (/api/auth/admin-login-request + /api/auth/admin-login-verify) validates
++// an email+OTP pair against a server-side allowlist but never issued any
++// credential the server could later verify. This is exactly the gap JWT is
++// meant to close here — it is added because a real backend authorization
++// requirement exists, not "for its own sake", and it is layered ONLY on
++// top of these admin/CMS API routes. It never touches Firestore/Firebase
++// Auth, which remain the public site's own separate concern.
++const JWT_SECRET = process.env.JWT_SECRET;
++const JWT_COOKIE_NAME = 'admin_session';
++const JWT_EXPIRES_IN = '2h';
++
++interface AdminJwtPayload {
++  sub: string; // admin email
++  role: 'admin';
++}
++
++function issueAdminToken(email: string): string {
++  if (!JWT_SECRET) {
++    // Fail safe, not fail open: if the secret is missing we must not issue
++    // a token that can never be meaningfully verified (or worse, get
++    // verified against an accidental empty-string secret).
++    throw new Error('JWT_SECRET is not configured on the server.');
++  }
++  const payload: AdminJwtPayload = { sub: email.toLowerCase(), role: 'admin' };
++  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
++}
++
++/**
++ * Verifies the admin_session cookie on every /api/admin/* request.
++ * Never trusts any client-supplied role/flag — the JWT signature and
++ * expiration are independently re-verified on every single request.
++ */
++function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
++  if (!JWT_SECRET) {
++    // Missing server secret must fail safely (deny), never fail open.
++    return res.status(500).json({ error: 'Server authentication is not configured.' });
++  }
++  const token = req.cookies?.[JWT_COOKIE_NAME];
++  if (!token) {
++    return res.status(401).json({ error: 'Authentication required.' });
++  }
++  try {
++    const decoded = jwt.verify(token, JWT_SECRET) as AdminJwtPayload;
++    if (decoded.role !== 'admin') {
++      return res.status(403).json({ error: 'Insufficient permissions.' });
++    }
++    (req as any).adminEmail = decoded.sub;
++    return next();
++  } catch (err) {
++    // Covers invalid signature, tampered payload, and expired tokens alike
++    // — jwt.verify throws for all of them, which is the correct 401 case.
++    return res.status(401).json({ error: 'Invalid or expired session. Please log in again.' });
++  }
++}
++
++// Brute-force protection for authentication endpoints (rule: /login, /auth,
++// /token, /password-reset must be rate limited). Keyed by IP; generous
++// enough not to lock out real users retrying a typo'd OTP, tight enough to
++// blunt automated guessing.
++const authRateLimiter = rateLimit({
++  windowMs: 15 * 60 * 1000, // 15 minutes
++  limit: 10,
++  standardHeaders: true,
++  legacyHeaders: false,
++  message: { error: 'Too many attempts. Please try again later.' },
++});
++
+ // Configuration Helpers
+ function getSmtpConfig(db: any) {
+   if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+@@ -885,6 +963,12 @@ function defineRoutes() {
+   // Razorpay webhook needs the exact raw request bytes for HMAC verification.
+   app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+   app.use(express.json());
++  app.use(cookieParser());
++
++  // Every /api/admin/* route below requires a valid, server-verified JWT.
++  // Registered before those routes are defined so it sits in front of all
++  // of them; auth routes (/api/auth/*) are untouched and remain public.
++  app.use('/api/admin', requireAdminAuth);
+ 
+   // API Route: Live server checking
+   app.get('/api/health', (req, res) => {
+@@ -1763,7 +1847,7 @@ function defineRoutes() {
+     return (parseInt(hash.substring(0, 8), 16) % 1000000).toString().padStart(6, '0');
+   };
+ 
+-  app.post('/api/auth/register', async (req, res) => {
++  app.post('/api/auth/register', authRateLimiter, async (req, res) => {
+     try {
+       const db = readDB();
+       const { name, email, phone, city, address, password } = req.body;
+@@ -1885,7 +1969,7 @@ function defineRoutes() {
+     }
+   });
+ 
+-  app.post('/api/auth/admin-login-request', async (req, res) => {
++  app.post('/api/auth/admin-login-request', authRateLimiter, async (req, res) => {
+     try {
+       const db = readDB();
+       const { email } = req.body;
+@@ -1944,7 +2028,7 @@ function defineRoutes() {
+     }
+   });
+ 
+-  app.post('/api/auth/admin-login-verify', (req, res) => {
++  app.post('/api/auth/admin-login-verify', authRateLimiter, (req, res) => {
+     try {
+       const db = readDB();
+       const { email } = req.body;
+@@ -1992,13 +2076,36 @@ function defineRoutes() {
+ 
+       writeDB(db);
+ 
++      let token: string;
++      try {
++        token = issueAdminToken(email);
++      } catch (tokenErr: any) {
++        // JWT_SECRET missing on the server — fail safely rather than
++        // returning success with no way to actually authorize later
++        // requests.
++        return res.status(500).json({ error: 'Server authentication is not configured.' });
++      }
++
++      res.cookie(JWT_COOKIE_NAME, token, {
++        httpOnly: true,
++        secure: true,
++        sameSite: 'lax',
++        maxAge: 2 * 60 * 60 * 1000, // 2h, matches JWT_EXPIRES_IN
++        path: '/',
++      });
++
+       res.json({ success: true, adminEmail: email });
+     } catch (err: any) {
+       res.status(500).json({ error: err.message });
+     }
+   });
+ 
+-  app.post('/api/auth/login-request', async (req, res) => {
++  app.post('/api/auth/admin-logout', (req, res) => {
++    res.clearCookie(JWT_COOKIE_NAME, { path: '/' });
++    res.json({ success: true });
++  });
++
++  app.post('/api/auth/login-request', authRateLimiter, async (req, res) => {
+     try {
+       const db = readDB();
+       const { email } = req.body;
+@@ -2079,7 +2186,7 @@ function defineRoutes() {
+     }
+   });
+ 
+-  app.post('/api/auth/login-verify', (req, res) => {
++  app.post('/api/auth/login-verify', authRateLimiter, (req, res) => {
+     try {
+       const db = readDB();
+       const { email } = req.body;
+@@ -2266,7 +2373,7 @@ function defineRoutes() {
+     }
+   });
+ 
+-  app.post('/api/auth/reset-password', (req, res) => {
++  app.post('/api/auth/reset-password', authRateLimiter, (req, res) => {
+     try {
+       const db = readDB();
+       const { email, password } = req.body;
+diff --git a/src/App.tsx b/src/App.tsx
+index 3bad88f..a32225d 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,4 +1,4 @@
+-import React, { useState, useEffect } from 'react';
++import React, { useState, useEffect, useRef } from 'react';
+ import { 
+   Sparkles, 
+   Settings, 
+@@ -20,7 +20,7 @@ import {
+   Star
+ } from 'lucide-react';
+ import { BackupData, Lead, Service, Order, PageId, Book } from './types';
+-import { getLeads, saveLeads, logActivity, saveCMSData, loadAuthoritativeCMSData, subscribeToCloudCMSData } from './utils';
++import { getLeads, saveLeads, logActivity, saveCMSData, loadAuthoritativeCMSData, subscribeToCloudCMSData, CMSLoadError } from './utils';
+ 
+ // Import Layout / Navigation
+ import Header from './components/Header';
+@@ -94,28 +94,46 @@ export default function App() {
+   const [cmsData, setCmsData] = useState<BackupData | null>(null);
+   const [cmsLoading, setCmsLoading] = useState(true);
+   const [cmsError, setCmsError] = useState<string | null>(null);
++  const [cmsErrorCode, setCmsErrorCode] = useState<string | null>(null);
++  // Holds the current load function so the Retry button and the 'online'
++  // recovery listener can trigger a genuine new request — never a full
++  // page reload.
++  const cmsRetryRef = useRef<() => Promise<void>>(async () => {});
+ 
+   // Load CMS data from Firestore on startup. If cms/main does not exist yet
+   // anywhere in the cloud, it is seeded ONCE from whatever CMS data already
+   // exists (see loadAuthoritativeCMSData in utils.ts) so nothing already on
+   // this site is lost — after that, Firestore alone drives the site content.
+   // A missing Firebase configuration, or any Firestore read error, surfaces
+-  // as a clear error state instead of silently rendering local/default data.
++  // as a clear, classified error state instead of silently rendering
++  // local/default data. loadAuthoritativeCMSData already retries transient
++  // failures internally (exponential backoff); by the time an error reaches
++  // here it is either non-retryable or retries were exhausted.
+   useEffect(() => {
+     let cancelled = false;
+-    (async () => {
++
++    const runLoad = async () => {
++      setCmsLoading(true);
+       try {
+         const data = await loadAuthoritativeCMSData();
+         if (cancelled) return;
+         setCmsData(data);
+         setCmsError(null);
++        setCmsErrorCode(null);
+         setCmsLoading(false);
+       } catch (e: any) {
+         if (cancelled) return;
+-        setCmsError(e?.message || 'Failed to load CMS data from Firestore.');
++        const message = e?.message || 'Failed to load CMS data from Firestore.';
++        const code = e instanceof CMSLoadError ? e.code : null;
++        setCmsError(message);
++        setCmsErrorCode(code);
+         setCmsLoading(false);
+       }
+-    })();
++    };
++
++    runLoad();
++    cmsRetryRef.current = runLoad;
++
+     // Live subscription: any admin save (this device or another) reflects
+     // here immediately without a manual refresh.
+     const unsubscribe = subscribeToCloudCMSData(
+@@ -123,13 +141,29 @@ export default function App() {
+         if (cancelled) return;
+         setCmsData(liveData);
+         setCmsError(null);
++        setCmsErrorCode(null);
+         setCmsLoading(false);
+       },
+       (err) => {
+         console.warn('Live CMS sync error (initial load result, if any, is unaffected):', err);
+       }
+     );
+-    return () => { cancelled = true; unsubscribe(); };
++
++    // Recovery signal only (per rule 7: navigator.onLine/online events are
++    // never treated as the definitive check — the actual retry above
++    // decides success/failure by making a real request). When the browser
++    // regains connectivity after a drop, try a genuine reload of the CMS
++    // document rather than waiting for the user to notice.
++    const handleOnline = () => {
++      if (!cancelled) runLoad();
++    };
++    window.addEventListener('online', handleOnline);
++
++    return () => {
++      cancelled = true;
++      unsubscribe();
++      window.removeEventListener('online', handleOnline);
++    };
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, []);
+   const [isAdminOpen, setIsAdminOpen] = useState(() => {
+@@ -285,10 +319,18 @@ export default function App() {
+         flexDirection: 'column', gap: '10px', background: '#080B12', color: '#e8eaf0',
+         padding: '24px', textAlign: 'center'
+       }}>
+-        <div style={{ fontSize: 16, fontWeight: 600, color: '#f87171' }}>Unable to load site content</div>
++        <div style={{ fontSize: 16, fontWeight: 600, color: '#f87171' }}>
++          {cmsErrorCode === 'permission-denied' || cmsErrorCode === 'unauthenticated'
++            ? 'Access issue loading site content'
++            : cmsErrorCode === 'not-found'
++            ? 'Site content not found'
++            : cmsErrorCode === 'config-missing'
++            ? 'Configuration issue'
++            : 'Unable to load site content'}
++        </div>
+         <div style={{ fontSize: 13, opacity: 0.75, maxWidth: 480 }}>{cmsError || 'Unknown CMS loading error.'}</div>
+         <button
+-          onClick={() => window.location.reload()}
++          onClick={() => cmsRetryRef.current()}
+           style={{
+             marginTop: 10, background: '#C9A227', color: '#1a1a1a', border: 'none',
+             padding: '10px 18px', borderRadius: 6, fontWeight: 600, cursor: 'pointer'
+diff --git a/src/components/AdminPanel.tsx b/src/components/AdminPanel.tsx
+index a9988c2..c0a23b4 100644
+--- a/src/components/AdminPanel.tsx
++++ b/src/components/AdminPanel.tsx
+@@ -1308,7 +1308,18 @@ ${urls.map(url => `  <url>
+           <button onClick={onClose} className="btn btn-sm btn-outline-gold">
+             ← Live Website Preview
+           </button>
+-          <button onClick={() => setIsAuthenticated(false)} className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 text-slate-350 hover:text-rose-400 hover:border-rose-400 flex items-center justify-center transition-all" title="Sign Out">
++          <button
++            onClick={() => {
++              // Clear the real server-side session (HttpOnly cookie) first,
++              // not just the frontend flag — otherwise the JWT would still
++              // be valid for /api/admin/* until it naturally expires.
++              fetch('/api/auth/admin-logout', { method: 'POST' }).catch(() => {});
++              setIsAuthenticated(false);
++            }}
++            className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 text-slate-350 hover:text-rose-400 hover:border-rose-400 flex items-center justify-center transition-all"
++            title="Sign Out"
++          >
++
+             <LogOut className="w-4 h-4" />
+           </button>
+         </div>
+diff --git a/src/firebase.ts b/src/firebase.ts
+index 2c8dd4c..3aeafb5 100644
+--- a/src/firebase.ts
++++ b/src/firebase.ts
+@@ -6,7 +6,13 @@ import {
+   signOut,
+   User,
+ } from "firebase/auth";
+-import { getFirestore, enableNetwork } from "firebase/firestore";
++import {
++  initializeFirestore,
++  getFirestore,
++  persistentLocalCache,
++  persistentMultipleTabManager,
++  enableNetwork,
++} from "firebase/firestore";
+ const firebaseConfig = {
+   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+@@ -47,7 +53,46 @@ try {
+     : initializeApp(firebaseConfig);
+ 
+   auth = getAuth(app);
+-  db = getFirestore(app);
++
++  // ---------------------------------------------------------------------
++  // ROOT-CAUSE FIX for "Failed to get document because the client is
++  // offline" on Android/mobile networks with a working data connection.
++  //
++  // Firestore's default transport opens a bidirectional gRPC-over-WebChannel
++  // streaming connection. Many mobile carrier networks, corporate proxies
++  // and some Android Chrome configurations silently break that streaming
++  // handshake (while normal HTTPS fetch/XHR traffic works fine). When that
++  // handshake fails, the SDK marks its internal connectivity state
++  // "offline" and getDoc()/onSnapshot() throw exactly that message — even
++  // though the device has a perfectly good internet connection. This is a
++  // well-documented Firestore Web SDK limitation, not a real offline state.
++  //
++  // The fix is to let Firestore auto-detect when long-polling is required
++  // instead of streaming (experimentalAutoDetectLongPolling), and to give
++  // it a durable local (IndexedDB) cache so a transient handshake failure
++  // doesn't immediately surface as "no data" to the user. This does NOT
++  // change security rules, does NOT change the data model, and does NOT
++  // silently serve stale data as if it were live (loadAuthoritativeCMSData
++  // still awaits a real getDoc() and still throws/classifies on failure;
++  // the cache only helps the SDK recover the connection and speeds up
++  // subsequent reads/snapshots).
++  try {
++    db = initializeFirestore(app, {
++      localCache: persistentLocalCache({
++        tabManager: persistentMultipleTabManager(),
++      }),
++      experimentalAutoDetectLongPolling: true,
++    });
++  } catch (initErr) {
++    // initializeFirestore throws if Firestore was already initialized for
++    // this app (e.g. Vite HMR re-running this module). Fall back to the
++    // existing instance rather than crashing the app.
++    console.warn(
++      "Firestore already initialized for this app instance; reusing it.",
++      initErr
++    );
++    db = getFirestore(app);
++  }
+ 
+   isFirebaseReady = true;
+ 
+diff --git a/src/utils.ts b/src/utils.ts
+index e97d57d..f74ff16 100644
+--- a/src/utils.ts
++++ b/src/utils.ts
+@@ -633,6 +633,105 @@ export const CMS_DOC_ID = 'main';
+  * can show a real error instead of quietly using stale/local/default data. */
+ export class CMSConfigError extends Error {}
+ 
++/**
++ * Classified CMS load error. `code` distinguishes a temporary connectivity
++ * hiccup (safe to retry automatically) from a real configuration/permission
++ * problem (must be surfaced to the user/admin, never silently retried).
++ */
++export type CMSErrorCode =
++  | 'config-missing'
++  | 'unavailable'
++  | 'deadline-exceeded'
++  | 'internal'
++  | 'unknown'
++  | 'permission-denied'
++  | 'unauthenticated'
++  | 'not-found'
++  | 'failed-precondition'
++  | 'invalid-argument'
++  | 'resource-exhausted';
++
++const RETRYABLE_CODES: ReadonlySet<CMSErrorCode> = new Set([
++  'unavailable',
++  'deadline-exceeded',
++  'internal',
++  'unknown',
++]);
++
++export class CMSLoadError extends Error {
++  code: CMSErrorCode;
++  retryable: boolean;
++  constructor(message: string, code: CMSErrorCode) {
++    super(message);
++    this.name = 'CMSLoadError';
++    this.code = code;
++    this.retryable = RETRYABLE_CODES.has(code);
++  }
++}
++
++/** Maps a raw Firestore/JS error to one of our known CMSErrorCode buckets.
++ * A Firestore SDK error being thrown does NOT mean the device is offline —
++ * it means that specific request failed for a specific, classifiable
++ * reason. We only ever call this "offline" in the UI when the code is
++ * genuinely a transient connectivity code. */
++function classifyCMSError(err: unknown): CMSLoadError {
++  const code = (err as { code?: string } | null)?.code;
++  const message = err instanceof Error ? err.message : String(err);
++
++  switch (code) {
++    case 'unavailable':
++      return new CMSLoadError(
++        'Temporarily unable to reach the CMS database (network/Firestore unavailable). Retrying automatically.',
++        'unavailable'
++      );
++    case 'deadline-exceeded':
++      return new CMSLoadError(
++        'The CMS request timed out. Retrying automatically.',
++        'deadline-exceeded'
++      );
++    case 'internal':
++      return new CMSLoadError(
++        'A temporary Firestore service error occurred. Retrying automatically.',
++        'internal'
++      );
++    case 'permission-denied':
++      return new CMSLoadError(
++        'Access to the CMS document was denied. Check Firestore security rules.',
++        'permission-denied'
++      );
++    case 'unauthenticated':
++      return new CMSLoadError(
++        'Authentication is required to read the CMS document.',
++        'unauthenticated'
++      );
++    case 'not-found':
++      return new CMSLoadError('The CMS document was not found.', 'not-found');
++    case 'failed-precondition':
++      return new CMSLoadError(
++        'The CMS request failed a precondition (e.g. multi-tab persistence conflict).',
++        'failed-precondition'
++      );
++    case 'invalid-argument':
++      return new CMSLoadError(
++        'The CMS request was malformed (invalid argument).',
++        'invalid-argument'
++      );
++    case 'resource-exhausted':
++      return new CMSLoadError(
++        'Firestore quota was exhausted for this request.',
++        'resource-exhausted'
++      );
++    default:
++      // Includes generic network/TypeError failures with no Firestore code.
++      // We deliberately do NOT call this "offline" — navigator.onLine can
++      // be true while a single request still fails; we just don't know the
++      // precise reason, so we classify it as unknown and allow a retry.
++      return new CMSLoadError(message || 'Unknown error loading CMS data.', 'unknown');
++  }
++}
++
++const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
++
+ /**
+  * The ONLY way the app should persist CMS changes. Awaits the Firestore
+  * write and throws on any failure (missing config, permission-denied,
+@@ -667,6 +766,9 @@ export const saveCMSData = async (data: BackupData): Promise<void> => {
+  * callers must show a real error state, not silently render local/default
+  * content as if it were live.
+  */
++const CMS_LOAD_MAX_ATTEMPTS = 4; // 1 initial + 3 retries
++const CMS_LOAD_BASE_DELAY_MS = 800; // 0.8s, 1.6s, 3.2s
++
+ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
+   const { db, isFirebaseReady } = await import('./firebase');
+   if (!isFirebaseReady || !db) {
+@@ -676,16 +778,45 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
+   }
+   const { doc, getDoc, setDoc } = await import('firebase/firestore');
+   const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
+-  const snap = await getDoc(ref);
+-  if (snap.exists()) {
+-    return snap.data() as BackupData;
++
++  let lastError: CMSLoadError | null = null;
++
++  for (let attempt = 1; attempt <= CMS_LOAD_MAX_ATTEMPTS; attempt++) {
++    try {
++      const snap = await getDoc(ref);
++      if (snap.exists()) {
++        return snap.data() as BackupData;
++      }
++      // cms/main does not exist yet anywhere — one-time migration seed from
++      // whatever CMS data already exists (legacy localStorage engine falls
++      // back to hardcoded defaults internally if nothing is saved yet).
++      const seed = getCMSData();
++      await setDoc(ref, seed);
++      return seed;
++    } catch (err) {
++      const classified = classifyCMSError(err);
++      lastError = classified;
++
++      const isLastAttempt = attempt === CMS_LOAD_MAX_ATTEMPTS;
++      if (!classified.retryable || isLastAttempt) {
++        throw classified;
++      }
++
++      // Exponential backoff before retrying a genuinely temporary failure
++      // (unavailable / deadline-exceeded / internal / unknown). This is
++      // exactly the case that used to surface as a permanent
++      // "client is offline" error on a single transient hiccup.
++      const delay = CMS_LOAD_BASE_DELAY_MS * Math.pow(2, attempt - 1);
++      console.warn(
++        `[CMS] Attempt ${attempt}/${CMS_LOAD_MAX_ATTEMPTS} failed (${classified.code}). Retrying in ${delay}ms.`
++      );
++      await sleep(delay);
++    }
+   }
+-  // cms/main does not exist yet anywhere — one-time migration seed from
+-  // whatever CMS data already exists (legacy localStorage engine falls back
+-  // to hardcoded defaults internally if there's truly nothing saved yet).
+-  const seed = getCMSData();
+-  await setDoc(ref, seed);
+-  return seed;
++
++  // Unreachable in practice (the loop always returns or throws), but keeps
++  // TypeScript happy and guarantees we never resolve silently.
++  throw lastError ?? new CMSLoadError('Unknown CMS load failure.', 'unknown');
+ };
+ 
+ /**
