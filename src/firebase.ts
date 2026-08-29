@@ -42,14 +42,21 @@ export { db, auth, isFirebaseReady, firebaseConfigError };
 
 // Connection testing as per Firebase integration instructions
 export async function testConnection() {
-  if (!isFirebaseReady || !db) return;
+  if (!isFirebaseReady || !db) {
+    console.warn("Firebase is not ready.");
+    return false;
+  }
+
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log("Verified Firebase live database connection successfully.");
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration or network status.", error);
-    }
+    await getDocFromServer(doc(db, "test", "connection"));
+    console.log("Firebase Firestore connection successful.");
+    return true;
+  } catch (error: any) {
+    console.error("Firebase Firestore connection failed:", {
+      code: error?.code || "unknown",
+      message: error?.message || String(error),
+    });
+    return false;
   }
 }
 
