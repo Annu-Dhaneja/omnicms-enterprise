@@ -691,10 +691,88 @@ class GoogleGenerativeAI {
 
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
+import jwt from 'jsonwebtoken';
+import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 
 
 // Load environment variables
 dotenv.config();
+
+// ===========================================================================
+// JWT admin authentication
+// ---------------------------------------------------------------------------
+// Firebase Authentication (Google sign-in) already exists on the frontend
+// for the public site, but the /api/admin/* Express endpoints below had NO
+// server-side authorization check at all — any client that knew (or
+// guessed) a URL could call them directly, regardless of whether the
+// frontend "believed" it was logged in. The existing admin login flow
+// (/api/auth/admin-login-request + /api/auth/admin-login-verify) validates
+// an email+OTP pair against a server-side allowlist but never issued any
+// credential the server could later verify. This is exactly the gap JWT is
+// meant to close here — it is added because a real backend authorization
+// requirement exists, not "for its own sake", and it is layered ONLY on
+// top of these admin/CMS API routes. It never touches Firestore/Firebase
+// Auth, which remain the public site's own separate concern.
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_COOKIE_NAME = 'admin_session';
+const JWT_EXPIRES_IN = '2h';
+
+interface AdminJwtPayload {
+  sub: string; // admin email
+  role: 'admin';
+}
+
+function issueAdminToken(email: string): string {
+  if (!JWT_SECRET) {
+    // Fail safe, not fail open: if the secret is missing we must not issue
+    // a token that can never be meaningfully verified (or worse, get
+    // verified against an accidental empty-string secret).
+    throw new Error('JWT_SECRET is not configured on the server.');
+  }
+  const payload: AdminJwtPayload = { sub: email.toLowerCase(), role: 'admin' };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+/**
+ * Verifies the admin_session cookie on every /api/admin/* request.
+ * Never trusts any client-supplied role/flag — the JWT signature and
+ * expiration are independently re-verified on every single request.
+ */
+function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (!JWT_SECRET) {
+    // Missing server secret must fail safely (deny), never fail open.
+    return res.status(500).json({ error: 'Server authentication is not configured.' });
+  }
+  const token = req.cookies?.[JWT_COOKIE_NAME];
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as AdminJwtPayload;
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: 'Insufficient permissions.' });
+    }
+    (req as any).adminEmail = decoded.sub;
+    return next();
+  } catch (err) {
+    // Covers invalid signature, tampered payload, and expired tokens alike
+    // — jwt.verify throws for all of them, which is the correct 401 case.
+    return res.status(401).json({ error: 'Invalid or expired session. Please log in again.' });
+  }
+}
+
+// Brute-force protection for authentication endpoints (rule: /login, /auth,
+// /token, /password-reset must be rate limited). Keyed by IP; generous
+// enough not to lock out real users retrying a typo'd OTP, tight enough to
+// blunt automated guessing.
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Please try again later.' },
+});
 
 // Configuration Helpers
 function getSmtpConfig(db: any) {
@@ -885,6 +963,12 @@ function defineRoutes() {
   // Razorpay webhook needs the exact raw request bytes for HMAC verification.
   app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
   app.use(express.json());
+  app.use(cookieParser());
+
+  // Every /api/admin/* route below requires a valid, server-verified JWT.
+  // Registered before those routes are defined so it sits in front of all
+  // of them; auth routes (/api/auth/*) are untouched and remain public.
+  app.use('/api/admin', requireAdminAuth);
 
   // API Route: Live server checking
   app.get('/api/health', (req, res) => {
@@ -1763,7 +1847,7 @@ function defineRoutes() {
     return (parseInt(hash.substring(0, 8), 16) % 1000000).toString().padStart(6, '0');
   };
 
-  app.post('/api/auth/register', async (req, res) => {
+  app.post('/api/auth/register', authRateLimiter, async (req, res) => {
     try {
       const db = readDB();
       const { name, email, phone, city, address, password } = req.body;
@@ -1885,7 +1969,7 @@ function defineRoutes() {
     }
   });
 
-  app.post('/api/auth/admin-login-request', async (req, res) => {
+  app.post('/api/auth/admin-login-request', authRateLimiter, async (req, res) => {
     try {
       const db = readDB();
       const { email } = req.body;
@@ -1944,7 +2028,7 @@ function defineRoutes() {
     }
   });
 
-  app.post('/api/auth/admin-login-verify', (req, res) => {
+  app.post('/api/auth/admin-login-verify', authRateLimiter, (req, res) => {
     try {
       const db = readDB();
       const { email } = req.body;
@@ -1992,13 +2076,36 @@ function defineRoutes() {
 
       writeDB(db);
 
+      let token: string;
+      try {
+        token = issueAdminToken(email);
+      } catch (tokenErr: any) {
+        // JWT_SECRET missing on the server — fail safely rather than
+        // returning success with no way to actually authorize later
+        // requests.
+        return res.status(500).json({ error: 'Server authentication is not configured.' });
+      }
+
+      res.cookie(JWT_COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 2 * 60 * 60 * 1000, // 2h, matches JWT_EXPIRES_IN
+        path: '/',
+      });
+
       res.json({ success: true, adminEmail: email });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.post('/api/auth/login-request', async (req, res) => {
+  app.post('/api/auth/admin-logout', (req, res) => {
+    res.clearCookie(JWT_COOKIE_NAME, { path: '/' });
+    res.json({ success: true });
+  });
+
+  app.post('/api/auth/login-request', authRateLimiter, async (req, res) => {
     try {
       const db = readDB();
       const { email } = req.body;
@@ -2079,7 +2186,7 @@ function defineRoutes() {
     }
   });
 
-  app.post('/api/auth/login-verify', (req, res) => {
+  app.post('/api/auth/login-verify', authRateLimiter, (req, res) => {
     try {
       const db = readDB();
       const { email } = req.body;
@@ -2266,7 +2373,7 @@ function defineRoutes() {
     }
   });
 
-  app.post('/api/auth/reset-password', (req, res) => {
+  app.post('/api/auth/reset-password', authRateLimiter, (req, res) => {
     try {
       const db = readDB();
       const { email, password } = req.body;
