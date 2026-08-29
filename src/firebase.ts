@@ -40,27 +40,7 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
 
 export { db, auth, isFirebaseReady, firebaseConfigError };
 
-// Connection testing as per Firebase integration instructions
-export async function testConnection() {
-  if (!isFirebaseReady || !db) {
-    console.warn("Firebase is not ready.");
-    return false;
-  }
 
-  try {
-    await getDocFromServer(doc(db, "test", "connection"));
-    console.log("Firebase Firestore connection successful.");
-    return true;
-  } catch (error: any) {
-    console.error("Firebase Firestore connection failed:", {
-      code: error?.code || "unknown",
-      message: error?.message || String(error),
-    });
-    return false;
-  }
-}
-
-// Error handling helper as per Firebase integration guideline
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
