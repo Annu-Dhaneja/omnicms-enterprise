@@ -1,9 +1,4 @@
-import {
-  initializeApp,
-  getApp,
-  getApps,
-} from "firebase/app";
-
+import { initializeApp, getApp, getApps } from "firebase/app";
 import {
   getAuth,
   signInWithPopup,
@@ -11,9 +6,9 @@ import {
   signOut,
   User,
 } from "firebase/auth";
-
 import {
   getFirestore,
+  enableNetwork,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -21,51 +16,56 @@ const firebaseConfig = {
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId:
-    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
-  measurementId:
-    import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
 };
 
-let app: any;
+let app;
 let db: any = null;
 let auth: any = null;
 let isFirebaseReady = false;
 let firebaseConfigError: string | null = null;
 
-if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-  try {
-    app =
-      getApps().length === 0
-        ? initializeApp(firebaseConfig)
-        : getApp();
-
-    db = getFirestore(app);
-    auth = getAuth(app);
-
-    isFirebaseReady = true;
-
-    console.log(
-      "Firebase initialized successfully:",
-      firebaseConfig.projectId
-    );
-  } catch (error) {
-    firebaseConfigError =
-      error instanceof Error
-        ? error.message
-        : String(error);
-
-    console.error(
-      "Failed to initialize Firebase:",
-      error
+try {
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    throw new Error(
+      "Firebase configuration is missing. Check VITE_FIREBASE_API_KEY and VITE_FIREBASE_PROJECT_ID."
     );
   }
-} else {
-  firebaseConfigError =
-    "Missing Firebase environment variables.";
 
-  console.error(firebaseConfigError);
+  app = getApps().length === 0
+    ? initializeApp(firebaseConfig)
+    : getApp();
+
+  auth = getAuth(app);
+
+  db = getFirestore(app);
+
+  isFirebaseReady = true;
+
+  // Force Firestore network connection
+  enableNetwork(db)
+    .then(() => {
+      console.log("Firestore network enabled successfully");
+    })
+    .catch((error) => {
+      console.error("Firestore network enable failed:", error);
+    });
+
+  console.log(
+    "Firebase initialized successfully:",
+    firebaseConfig.projectId
+  );
+
+} catch (error) {
+  firebaseConfigError =
+    error instanceof Error ? error.message : String(error);
+
+  console.error(
+    "Firebase initialization failed:",
+    firebaseConfigError
+  );
 }
 
 export {
@@ -82,7 +82,7 @@ export enum OperationType {
   LIST = "list",
   GET = "get",
   WRITE = "write",
-}
+};
 
 export interface FirestoreErrorInfo {
   error: string;
@@ -109,28 +109,20 @@ export function handleFirestoreError(
   const currentUser = auth?.currentUser as User | null;
 
   const errInfo: FirestoreErrorInfo = {
-    error:
-      error instanceof Error
-        ? error.message
-        : String(error),
+    error: error instanceof Error ? error.message : String(error),
 
     authInfo: {
       userId: currentUser?.uid || null,
       email: currentUser?.email || null,
-      emailVerified:
-        currentUser?.emailVerified || null,
-      isAnonymous:
-        currentUser?.isAnonymous || null,
-      tenantId:
-        currentUser?.tenantId || null,
+      emailVerified: currentUser?.emailVerified || null,
+      isAnonymous: currentUser?.isAnonymous || null,
+      tenantId: currentUser?.tenantId || null,
 
       providerInfo:
-        currentUser?.providerData?.map(
-          (provider) => ({
-            providerId: provider.providerId,
-            email: provider.email,
-          })
-        ) || [],
+        currentUser?.providerData?.map((provider) => ({
+          providerId: provider.providerId,
+          email: provider.email,
+        })) || [],
     },
 
     operationType,
@@ -138,7 +130,7 @@ export function handleFirestoreError(
   };
 
   console.error(
-    "Firestore Error:",
+    "Firestore Error Occurred:",
     JSON.stringify(errInfo)
   );
 
@@ -148,21 +140,21 @@ export function handleFirestoreError(
 export async function logInWithGoogle() {
   if (!isFirebaseReady || !auth) {
     throw new Error(
-      "Firebase is not configured. Please check VITE_FIREBASE environment variables."
+      firebaseConfigError ||
+      "Firebase is not initialized."
     );
   }
 
   try {
-    const provider =
-      new GoogleAuthProvider();
+    const provider = new GoogleAuthProvider();
 
-    const result =
-      await signInWithPopup(
-        auth,
-        provider
-      );
+    const result = await signInWithPopup(
+      auth,
+      provider
+    );
 
     return result.user;
+
   } catch (error) {
     console.error(
       "Google login failed:",
@@ -174,9 +166,7 @@ export async function logInWithGoogle() {
 }
 
 export async function logOutUser() {
-  if (!isFirebaseReady || !auth) {
-    return;
-  }
+  if (!auth) return;
 
   try {
     await signOut(auth);
