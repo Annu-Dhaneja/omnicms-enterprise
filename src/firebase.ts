@@ -1,23 +1,21 @@
-import { initializeApp, getApp, getApps } from 'firebase/app';
+import { initializeApp, getApp, getApps } from "firebase/app";
 import {
   getAuth,
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
-  User
-} from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+  User,
+} from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY || "",
-  authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: (import.meta as any).env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId:
-    (import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: (import.meta as any).env.VITE_FIREBASE_APP_ID || "",
-  measurementId:
-    (import.meta as any).env.VITE_FIREBASE_MEASUREMENT_ID || "",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
 };
 
 let app: any = null;
@@ -37,7 +35,7 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     isFirebaseReady = true;
 
     console.log(
-      "Firebase initialized successfully:",
+      "Firebase initialized:",
       firebaseConfig.projectId
     );
   } catch (error) {
@@ -45,22 +43,22 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
       error instanceof Error ? error.message : String(error);
 
     console.error(
-      "Failed to initialize Firebase:",
-      firebaseConfigError
+      "Firebase initialization failed:",
+      error
     );
   }
 } else {
   firebaseConfigError =
-    "Firebase configuration is missing. Please add VITE_FIREBASE_* variables.";
+    "Firebase environment variables are missing.";
 
-  console.warn(firebaseConfigError);
+  console.error(firebaseConfigError);
 }
 
 export {
   db,
   auth,
   isFirebaseReady,
-  firebaseConfigError
+  firebaseConfigError,
 };
 
 export enum OperationType {
@@ -97,20 +95,28 @@ export function handleFirestoreError(
   const currentUser = auth?.currentUser as User | null;
 
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error:
+      error instanceof Error
+        ? error.message
+        : String(error),
 
     authInfo: {
       userId: currentUser?.uid || null,
       email: currentUser?.email || null,
-      emailVerified: currentUser?.emailVerified || null,
-      isAnonymous: currentUser?.isAnonymous || null,
-      tenantId: currentUser?.tenantId || null,
+      emailVerified:
+        currentUser?.emailVerified || null,
+      isAnonymous:
+        currentUser?.isAnonymous || null,
+      tenantId:
+        currentUser?.tenantId || null,
 
       providerInfo:
-        currentUser?.providerData?.map((provider) => ({
-          providerId: provider.providerId,
-          email: provider.email,
-        })) || [],
+        currentUser?.providerData?.map(
+          (provider) => ({
+            providerId: provider.providerId,
+            email: provider.email,
+          })
+        ) || [],
     },
 
     operationType,
@@ -135,12 +141,10 @@ export async function logInWithGoogle() {
       role: "Super Admin",
     };
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "acharya_mock_admin_user",
-        JSON.stringify(mockUser)
-      );
-    }
+    localStorage.setItem(
+      "acharya_mock_admin_user",
+      JSON.stringify(mockUser)
+    );
 
     return mockUser;
   }
@@ -165,11 +169,9 @@ export async function logInWithGoogle() {
 }
 
 export async function logOutUser() {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem(
-      "acharya_mock_admin_user"
-    );
-  }
+  localStorage.removeItem(
+    "acharya_mock_admin_user"
+  );
 
   if (!isFirebaseReady || !auth) {
     return;
@@ -183,25 +185,6 @@ export async function logOutUser() {
       error
     );
 
-    throw error;
-  }
-}
-  } catch (error) {
-    console.error("Google login failed via Firebase Auth SDK:", error);
-    throw error;
-  }
-}
-
-// Logout Helper
-export async function logOutUser() {
-  localStorage.removeItem("acharya_mock_admin_user");
-  if (!isFirebaseReady || !auth) {
-    return;
-  }
-  try {
-    await signOut(auth);
-  } catch (error) {
-    console.error("Signout failed via Firebase Auth SDK:", error);
     throw error;
   }
 }
