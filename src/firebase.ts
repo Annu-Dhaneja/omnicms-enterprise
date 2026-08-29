@@ -5,7 +5,7 @@ import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 const firebaseConfig = {
   apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY || "",
   authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || "acharya-khurana-cms-demo",
+  projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || "",
   storageBucket: (import.meta as any).env.VITE_FIREBASE_STORAGE_BUCKET || "",
   messagingSenderId: (import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
   appId: (import.meta as any).env.VITE_FIREBASE_APP_ID || "",
@@ -17,9 +17,12 @@ let app;
 let db: any = null;
 let auth: any = null;
 let isFirebaseReady = false;
+let firebaseConfigError: string | null = null;
 
-// Check if credentials are present (not empty values)
-if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.projectId !== "acharya-khurana-cms-demo") {
+// Firestore is now the authoritative CMS store, so a missing/invalid config
+// must be reported clearly rather than silently treated as "use localStorage
+// instead" — there is no demo-project fallback used for real connections.
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     db = getFirestore(app, firebaseConfig.firestoreDatabaseId || 'default');
@@ -27,13 +30,15 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.projectI
     isFirebaseReady = true;
     console.log("Firebase initialized successfully with cloud project: ", firebaseConfig.projectId);
   } catch (error) {
-    console.warn("Failed to initialize Firebase SDK, falling back to Local Storage CMS Engine:", error);
+    firebaseConfigError = error instanceof Error ? error.message : String(error);
+    console.error("Failed to initialize Firebase SDK:", error);
   }
 } else {
-  console.log("Empty or demo credentials detected. Using Local Storage CMS Engine.");
+  firebaseConfigError = "Missing Firebase environment variables (VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID). CMS data cannot be loaded or saved until these are set.";
+  console.error(firebaseConfigError);
 }
 
-export { db, auth, isFirebaseReady };
+export { db, auth, isFirebaseReady, firebaseConfigError };
 
 // Connection testing as per Firebase integration instructions
 export async function testConnection() {

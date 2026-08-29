@@ -611,9 +611,111 @@ export const getCMSData = (): BackupData => {
   return initialData;
 };
 
-export const saveCMSData = (data: BackupData): void => {
+/**
+ * ===========================================================================
+ * Firestore CMS persistence — Firestore (`cms/main`) is now the SOLE
+ * authoritative source for CMS data. Same BackupData shape, same
+ * AdminPanel/Google-auth admin flow, same firebase.ts config — this is not a
+ * second admin system or a second Firebase project.
+ *
+ * localStorage is no longer used to store or cache CMS content. It is only
+ * ever read once, as a one-time migration seed, the very first time cms/main
+ * doesn't exist yet in Firestore (see loadAuthoritativeCMSData). After that
+ * seed write succeeds, localStorage is never read or written for CMS data
+ * again — cart/wishlist/leads keys elsewhere in this app are unrelated
+ * client-only preferences and are untouched by any of this.
+ * ===========================================================================
+ */
+export const CMS_COLLECTION = 'cms';
+export const CMS_DOC_ID = 'main';
+
+/** Thrown when Firebase/Firestore isn't configured or reachable, so callers
+ * can show a real error instead of quietly using stale/local/default data. */
+export class CMSConfigError extends Error {}
+
+/**
+ * The ONLY way the app should persist CMS changes. Awaits the Firestore
+ * write and throws on any failure (missing config, permission-denied,
+ * offline, etc.) — callers (AdminPanel via App.tsx's handleSaveCMS) must
+ * surface that failure to the admin as a real "save failed" state, never
+ * report success and never fall back to localStorage.
+ */
+export const saveCMSData = async (data: BackupData): Promise<void> => {
+  const { db, isFirebaseReady } = await import('./firebase');
+  if (!isFirebaseReady || !db) {
+    throw new CMSConfigError(
+      'Firebase is not configured (missing VITE_FIREBASE_* environment variables). CMS changes were NOT saved.'
+    );
+  }
+  const { doc, setDoc } = await import('firebase/firestore');
   data.timestamp = new Date().toISOString();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // merge:true protects any field a different, older client doesn't know
+  // about; every admin save already sends the complete BackupData object.
+  await setDoc(doc(db, CMS_COLLECTION, CMS_DOC_ID), data, { merge: true });
+};
+
+/**
+ * Loads the authoritative CMS document from Firestore on app startup.
+ * - If cms/main already exists in the cloud, returns it as-is.
+ * - If it does NOT exist yet (first activation of this architecture),
+ *   seeds it ONCE from whatever CMS data already exists locally (legacy
+ *   localStorage engine, or hardcoded defaults if truly nothing exists
+ *   anywhere) so no existing site content is lost, then returns that.
+ * - After that one-time seed, this function never again writes
+ *   default/mock/local data over the cloud document.
+ * Throws CMSConfigError / the underlying Firestore error on any failure —
+ * callers must show a real error state, not silently render local/default
+ * content as if it were live.
+ */
+export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
+  const { db, isFirebaseReady } = await import('./firebase');
+  if (!isFirebaseReady || !db) {
+    throw new CMSConfigError(
+      'Firebase is not configured (missing VITE_FIREBASE_* environment variables). The site cannot load live CMS content.'
+    );
+  }
+  const { doc, getDoc, setDoc } = await import('firebase/firestore');
+  const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    return snap.data() as BackupData;
+  }
+  // cms/main does not exist yet anywhere — one-time migration seed from
+  // whatever CMS data already exists (legacy localStorage engine falls back
+  // to hardcoded defaults internally if there's truly nothing saved yet).
+  const seed = getCMSData();
+  await setDoc(ref, seed);
+  return seed;
+};
+
+/**
+ * Live subscription to the CMS document so that a save from this tab,
+ * another tab, or another device/browser reflects here without a manual
+ * refresh. Calls onError (instead of silently no-op'ing) on any Firestore
+ * listener error so the app can decide how to surface it.
+ */
+export const subscribeToCloudCMSData = (
+  onData: (data: BackupData) => void,
+  onError?: (err: Error) => void
+): (() => void) => {
+  let unsub: (() => void) | undefined;
+  let cancelled = false;
+  (async () => {
+    try {
+      const { db, isFirebaseReady } = await import('./firebase');
+      if (!isFirebaseReady || !db) return;
+      const { doc, onSnapshot } = await import('firebase/firestore');
+      if (cancelled) return;
+      unsub = onSnapshot(
+        doc(db, CMS_COLLECTION, CMS_DOC_ID),
+        (snap) => { if (snap.exists()) onData(snap.data() as BackupData); },
+        (err) => { if (onError) onError(err as Error); }
+      );
+    } catch (e) {
+      if (onError) onError(e as Error);
+    }
+  })();
+  return () => { cancelled = true; if (unsub) unsub(); };
 };
 
 export const getLeads = (): Lead[] => {

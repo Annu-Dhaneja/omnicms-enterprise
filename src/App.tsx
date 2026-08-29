@@ -20,7 +20,7 @@ import {
   Star
 } from 'lucide-react';
 import { BackupData, Lead, Service, Order, PageId, Book } from './types';
-import { getCMSData, saveCMSData, getLeads, saveLeads, logActivity } from './utils';
+import { getLeads, saveLeads, logActivity, saveCMSData, loadAuthoritativeCMSData, subscribeToCloudCMSData } from './utils';
 
 // Import Layout / Navigation
 import Header from './components/Header';
@@ -88,7 +88,50 @@ export default function App() {
   }, []);
 
   // Administrative State
-  const [cmsData, setCmsData] = useState<BackupData>(() => getCMSData());
+  // Firestore (cms/main) is now the SOLE authoritative source for CMS data.
+  // No synchronous localStorage read here anymore — the site waits for the
+  // real cloud document before rendering any CMS-driven content.
+  const [cmsData, setCmsData] = useState<BackupData | null>(null);
+  const [cmsLoading, setCmsLoading] = useState(true);
+  const [cmsError, setCmsError] = useState<string | null>(null);
+
+  // Load CMS data from Firestore on startup. If cms/main does not exist yet
+  // anywhere in the cloud, it is seeded ONCE from whatever CMS data already
+  // exists (see loadAuthoritativeCMSData in utils.ts) so nothing already on
+  // this site is lost — after that, Firestore alone drives the site content.
+  // A missing Firebase configuration, or any Firestore read error, surfaces
+  // as a clear error state instead of silently rendering local/default data.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await loadAuthoritativeCMSData();
+        if (cancelled) return;
+        setCmsData(data);
+        setCmsError(null);
+        setCmsLoading(false);
+      } catch (e: any) {
+        if (cancelled) return;
+        setCmsError(e?.message || 'Failed to load CMS data from Firestore.');
+        setCmsLoading(false);
+      }
+    })();
+    // Live subscription: any admin save (this device or another) reflects
+    // here immediately without a manual refresh.
+    const unsubscribe = subscribeToCloudCMSData(
+      (liveData) => {
+        if (cancelled) return;
+        setCmsData(liveData);
+        setCmsError(null);
+        setCmsLoading(false);
+      },
+      (err) => {
+        console.warn('Live CMS sync error (initial load result, if any, is unaffected):', err);
+      }
+    );
+    return () => { cancelled = true; unsubscribe(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [isAdminOpen, setIsAdminOpen] = useState(() => {
     return window.location.pathname.toLowerCase().startsWith('/admin');
   });
@@ -125,6 +168,7 @@ export default function App() {
 
   // Synchronize CSS Theme Variables with document root
   useEffect(() => {
+    if (!cmsData) return;
     const r = document.documentElement;
     const { theme } = cmsData;
     
@@ -142,11 +186,11 @@ export default function App() {
       document.body.style.backgroundColor = '#080B12';
       document.body.style.color = '#e8eaf0';
     }
-  }, [cmsData.theme]);
+  }, [cmsData]);
 
   // Dynamic SEO Injection on Page Route Swaps
   useEffect(() => {
-    if (!cmsData.pageSeo) return;
+    if (!cmsData || !cmsData.pageSeo) return;
     const activeSeo = cmsData.pageSeo.find(s => s.pageId === currentPage);
     if (activeSeo) {
       document.title = activeSeo.title;
@@ -179,7 +223,7 @@ export default function App() {
         document.head.appendChild(script);
       }
     }
-  }, [currentPage, cmsData.pageSeo]);
+  }, [currentPage, cmsData]);
 
   // Synchronize dynamic store states on refresh
   const syncStoreData = async () => {
@@ -190,12 +234,12 @@ export default function App() {
         fetch('/api/orders').then(r => r.json())
       ]);
 
-      setCmsData(prev => ({
+      setCmsData(prev => prev ? ({
         ...prev,
         books: Array.isArray(resBooks) ? resBooks : prev.books,
         coupons: Array.isArray(resCoupons) ? resCoupons : prev.coupons,
         orders: Array.isArray(resOrders) ? resOrders : prev.orders
-      }));
+      }) : prev);
     } catch {
       console.warn("Unable to dynamically synchronize API backend catalogues, using fallback caches.");
     }
@@ -212,10 +256,57 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  // Save modified CMS layouts
+  // Firestore is the sole source of CMS data now, so nothing below this
+  // point (handlers or the site's JSX) runs until it has actually loaded.
+  // This also lets TypeScript treat `cmsData` as non-null for the rest of
+  // this component. Uses the existing dark/gold visual language — no new
+  // theme, layout, or design system introduced.
+  if (cmsLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: '14px', background: '#080B12', color: '#e8eaf0'
+      }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: '50%',
+          border: '3px solid rgba(201,162,39,0.25)', borderTopColor: '#C9A227',
+          animation: 'spin 0.9s linear infinite'
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div style={{ fontSize: 14, opacity: 0.75 }}>Loading site content…</div>
+      </div>
+    );
+  }
+
+  if (cmsError || !cmsData) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: '10px', background: '#080B12', color: '#e8eaf0',
+        padding: '24px', textAlign: 'center'
+      }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: '#f87171' }}>Unable to load site content</div>
+        <div style={{ fontSize: 13, opacity: 0.75, maxWidth: 480 }}>{cmsError || 'Unknown CMS loading error.'}</div>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            marginTop: 10, background: '#C9A227', color: '#1a1a1a', border: 'none',
+            padding: '10px 18px', borderRadius: 6, fontWeight: 600, cursor: 'pointer'
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // Save modified CMS layouts. Firestore is authoritative: the write must
+  // succeed there before we treat the save as successful. Throws on failure
+  // so AdminPanel (the caller) can show a real "save failed" state instead of
+  // a false success message.
   const handleSaveCMS = async (newData: BackupData) => {
+    await saveCMSData(newData); // awaits the Firestore write; throws on failure
     setCmsData(newData);
-    saveCMSData(newData);
 
     try {
       await fetch('/api/sync-books', {

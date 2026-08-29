@@ -79,7 +79,7 @@ import { logInWithGoogle } from '../firebase';
 
 interface AdminPanelProps {
   initialData: BackupData;
-  onSave: (data: BackupData) => void;
+  onSave: (data: BackupData) => Promise<void>;
   onClose: () => void;
 }
 
@@ -92,6 +92,8 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
   const [authStep, setAuthStep] = useState<1 | 2>(1);
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [isSavingCMS, setIsSavingCMS] = useState(false);
+  const [cmsSaveError, setCmsSaveError] = useState('');
   const [otpBypassDisplay, setOtpBypassDisplay] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
@@ -931,8 +933,13 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
     }
   };
 
-  // Main Save
-  const handleSaveCMS = () => {
+  // Main Save — awaits the Firestore write via onSave (App.tsx's
+  // handleSaveCMS -> utils.ts saveCMSData). Only shows success after
+  // Firestore actually confirms; shows a real error and does NOT claim
+  // success if the write fails. Guards against duplicate saves while one
+  // is already in flight.
+  const handleSaveCMS = async () => {
+    if (isSavingCMS) return; // a save is already in progress
     const updatedData: BackupData = {
       version: initialData.version,
       timestamp: new Date().toISOString(),
@@ -957,10 +964,21 @@ export default function AdminPanel({ initialData, onSave, onClose }: AdminPanelP
       whatsapp,
       googleMaps
     };
-    onSave(updatedData);
-    logActivity("CMS WEBSITE UPDATE", "Saved customized website configuration schemas to database.");
-    setActivityLogs(getActivityLogs());
-    alert("✨ Website updated and published successfully!");
+
+    setIsSavingCMS(true);
+    setCmsSaveError('');
+    try {
+      await onSave(updatedData);
+      logActivity("CMS WEBSITE UPDATE", "Saved customized website configuration schemas to database.");
+      setActivityLogs(getActivityLogs());
+      alert("✨ Website updated and published successfully!");
+    } catch (err: any) {
+      const message = err?.message || 'Unknown error while saving to Firestore.';
+      setCmsSaveError(message);
+      alert(`✖ Save failed — changes were NOT published.\n\n${message}`);
+    } finally {
+      setIsSavingCMS(false);
+    }
   };
 
   // Drag and Drop ordering simulation
@@ -1281,9 +1299,12 @@ ${urls.map(url => `  <url>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={handleSaveCMS} className="btn btn-sm btn-gold">
-            <Save className="w-4 h-4" /> Save & Publish
+          <button onClick={handleSaveCMS} disabled={isSavingCMS} className="btn btn-sm btn-gold" style={isSavingCMS ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}>
+            <Save className="w-4 h-4" /> {isSavingCMS ? 'Saving to Firestore…' : 'Save & Publish'}
           </button>
+          {cmsSaveError && (
+            <div style={{ fontSize: 11, color: '#f87171', maxWidth: 220 }}>{cmsSaveError}</div>
+          )}
           <button onClick={onClose} className="btn btn-sm btn-outline-gold">
             ← Live Website Preview
           </button>

@@ -124,5 +124,16 @@ service cloud.firestore {
       allow read: if true; // Public FAQ
       allow write: if isAdmin() && isValidId(faqId) && isValidFAQ(incoming());
     }
+
+    // Full CMS backup/document (site, hero, about, services, books, coupons,
+    // orders, theme, SEO, WhatsApp, etc.) — same single BackupData doc the
+    // existing AdminPanel already edits, now persisted in the cloud.
+    // Public visitors need to read it to render the site; only the same
+    // Google-authenticated admins who can already open the Admin Panel
+    // (isAdmin(), unchanged) may write it.
+    match /cms/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(docId);
+    }
   }
 }
