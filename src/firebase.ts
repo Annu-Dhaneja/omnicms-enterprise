@@ -1,74 +1,75 @@
-import { initializeApp, getApp, getApps } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   getAuth,
-  signInWithPopup,
   GoogleAuthProvider,
+  signInWithPopup,
   signOut,
   User,
 } from "firebase/auth";
-import {
-  getFirestore,
-  enableNetwork,
-} from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-let app;
-let db: any = null;
-let auth: any = null;
+let app: ReturnType<typeof initializeApp>;
+let db: ReturnType<typeof getFirestore> | null = null;
+let auth: ReturnType<typeof getAuth> | null = null;
+
 let isFirebaseReady = false;
 let firebaseConfigError: string | null = null;
 
 try {
-  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  const requiredConfig = {
+    apiKey: firebaseConfig.apiKey,
+    authDomain: firebaseConfig.authDomain,
+    projectId: firebaseConfig.projectId,
+    appId: firebaseConfig.appId,
+  };
+
+  const missing = Object.entries(requiredConfig)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (missing.length > 0) {
     throw new Error(
-      "Firebase configuration is missing. Check VITE_FIREBASE_API_KEY and VITE_FIREBASE_PROJECT_ID."
+      `Firebase configuration missing: ${missing.join(", ")}`
     );
   }
 
-  app = getApps().length === 0
-    ? initializeApp(firebaseConfig)
-    : getApp();
+  app = getApps().length
+    ? getApp()
+    : initializeApp(firebaseConfig);
 
   auth = getAuth(app);
-
   db = getFirestore(app);
 
   isFirebaseReady = true;
 
-  // Force Firestore network connection
-  enableNetwork(db)
-    .then(() => {
-      console.log("Firestore network enabled successfully");
-    })
-    .catch((error) => {
-      console.error("Firestore network enable failed:", error);
-    });
-
   console.log(
-    "Firebase initialized successfully:",
+    "✅ Firebase initialized:",
     firebaseConfig.projectId
   );
-
 } catch (error) {
   firebaseConfigError =
-    error instanceof Error ? error.message : String(error);
+    error instanceof Error
+      ? error.message
+      : String(error);
 
   console.error(
-    "Firebase initialization failed:",
+    "❌ Firebase initialization failed:",
     firebaseConfigError
   );
 }
 
 export {
+  app,
   db,
   auth,
   isFirebaseReady,
@@ -82,7 +83,7 @@ export enum OperationType {
   LIST = "list",
   GET = "get",
   WRITE = "write",
-};
+}
 
 export interface FirestoreErrorInfo {
   error: string;
@@ -105,36 +106,43 @@ export function handleFirestoreError(
   error: unknown,
   operationType: OperationType,
   path: string | null
-) {
+): never {
   const currentUser = auth?.currentUser as User | null;
 
+  const message =
+    error instanceof Error
+      ? error.message
+      : String(error);
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: message,
+
+    operationType,
+    path,
 
     authInfo: {
-      userId: currentUser?.uid || null,
-      email: currentUser?.email || null,
-      emailVerified: currentUser?.emailVerified || null,
-      isAnonymous: currentUser?.isAnonymous || null,
-      tenantId: currentUser?.tenantId || null,
+      userId: currentUser?.uid ?? null,
+      email: currentUser?.email ?? null,
+      emailVerified: currentUser?.emailVerified ?? null,
+      isAnonymous: currentUser?.isAnonymous ?? null,
+      tenantId: currentUser?.tenantId ?? null,
 
       providerInfo:
         currentUser?.providerData?.map((provider) => ({
           providerId: provider.providerId,
           email: provider.email,
-        })) || [],
+        })) ?? [],
     },
-
-    operationType,
-    path,
   };
 
   console.error(
-    "Firestore Error Occurred:",
-    JSON.stringify(errInfo)
+    "🔥 Firestore Error:",
+    errInfo
   );
 
-  throw new Error(JSON.stringify(errInfo));
+  throw new Error(
+    JSON.stringify(errInfo)
+  );
 }
 
 export async function logInWithGoogle() {
@@ -145,19 +153,22 @@ export async function logInWithGoogle() {
     );
   }
 
-  try {
-    const provider = new GoogleAuthProvider();
+  const provider = new GoogleAuthProvider();
 
+  provider.setCustomParameters({
+    prompt: "select_account",
+  });
+
+  try {
     const result = await signInWithPopup(
       auth,
       provider
     );
 
     return result.user;
-
   } catch (error) {
     console.error(
-      "Google login failed:",
+      "❌ Google login failed:",
       error
     );
 
@@ -172,7 +183,7 @@ export async function logOutUser() {
     await signOut(auth);
   } catch (error) {
     console.error(
-      "Signout failed:",
+      "❌ Signout failed:",
       error
     );
 
