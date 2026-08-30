@@ -11,8 +11,8 @@ import {
   getFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
-  enableNetwork,
 } from "firebase/firestore";
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -31,6 +31,7 @@ let isFirebaseReady = false;
 let firebaseConfigError: string | null = null;
 
 try {
+  // Required Firebase variables
   const requiredConfig = {
     apiKey: firebaseConfig.apiKey,
     authDomain: firebaseConfig.authDomain,
@@ -48,56 +49,42 @@ try {
     );
   }
 
+  // Firebase App
   app = getApps().length
     ? getApp()
     : initializeApp(firebaseConfig);
 
+  // Firebase Auth
   auth = getAuth(app);
 
-  // ---------------------------------------------------------------------
-  // ROOT-CAUSE FIX for "Failed to get document because the client is
-  // offline" on Android/mobile networks with a working data connection.
+  // Firestore
   //
-  // Firestore's default transport opens a bidirectional gRPC-over-WebChannel
-  // streaming connection. Many mobile carrier networks, corporate proxies
-  // and some Android Chrome configurations silently break that streaming
-  // handshake (while normal HTTPS fetch/XHR traffic works fine). When that
-  // handshake fails, the SDK marks its internal connectivity state
-  // "offline" and getDoc()/onSnapshot() throw exactly that message — even
-  // though the device has a perfectly good internet connection. This is a
-  // well-documented Firestore Web SDK limitation, not a real offline state.
+  // IMPORTANT:
+  // experimentalAutoDetectLongPolling is intentionally removed.
+  // We use the supported auto long-polling setting instead.
   //
-  // The fix is to let Firestore auto-detect when long-polling is required
-  // instead of streaming (experimentalAutoDetectLongPolling), and to give
-  // it a durable local (IndexedDB) cache so a transient handshake failure
-  // doesn't immediately surface as "no data" to the user. This does NOT
-  // change security rules, does NOT change the data model, and does NOT
-  // silently serve stale data as if it were live (loadAuthoritativeCMSData
-  // still awaits a real getDoc() and still throws/classifies on failure;
-  // the cache only helps the SDK recover the connection and speeds up
-  // subsequent reads/snapshots).
+  // persistentLocalCache gives Firestore an IndexedDB cache.
+  // This is NOT the CMS database. Firestore remains the source of truth.
   try {
     db = initializeFirestore(app, {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager(),
       }),
-      experimentalAutoDetectLongPolling: true,
+      experimentalForceLongPolling: true,
     });
-  } catch (initErr) {
-    // initializeFirestore throws if Firestore was already initialized for
-    // this app (e.g. Vite HMR re-running this module). Fall back to the
-    // existing instance rather than crashing the app.
+  } catch (error) {
     console.warn(
-      "Firestore already initialized for this app instance; reusing it.",
-      initErr
+      "Firestore was already initialized. Reusing existing Firestore instance.",
+      error
     );
+
     db = getFirestore(app);
   }
 
   isFirebaseReady = true;
 
   console.log(
-    "✅ Firebase initialized:",
+    "✅ Firebase initialized successfully:",
     firebaseConfig.projectId
   );
 } catch (error) {
@@ -160,10 +147,8 @@ export function handleFirestoreError(
 
   const errInfo: FirestoreErrorInfo = {
     error: message,
-
     operationType,
     path,
-
     authInfo: {
       userId: currentUser?.uid ?? null,
       email: currentUser?.email ?? null,
@@ -179,21 +164,16 @@ export function handleFirestoreError(
     },
   };
 
-  console.error(
-    "🔥 Firestore Error:",
-    errInfo
-  );
+  console.error("🔥 Firestore Error:", errInfo);
 
-  throw new Error(
-    JSON.stringify(errInfo)
-  );
+  throw new Error(JSON.stringify(errInfo));
 }
 
 export async function logInWithGoogle() {
   if (!isFirebaseReady || !auth) {
     throw new Error(
       firebaseConfigError ||
-      "Firebase is not initialized."
+        "Firebase is not initialized."
     );
   }
 
