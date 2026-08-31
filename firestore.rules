@@ -19,7 +19,7 @@ service cloud.firestore {
     // Bootstrapped administrator checking via explicit lookups
     function isAdmin() {
       return isEmailVerified() && (
-        request.auth.token.email == "kanika9694@gmail.com" ||
+        request.auth.token.email == "tnkhurana3@gmail.com" ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
