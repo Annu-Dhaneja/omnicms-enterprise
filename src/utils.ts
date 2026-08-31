@@ -668,7 +668,8 @@ export const saveCMSData = async (data: BackupData): Promise<void> => {
  * content as if it were live.
  */
 export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
- const { db, isFirebaseReady } = await import('./firebase');
+ const { db, isFirebaseReady } = const seed = getCMSData();
+return seed;;
 
  if (!isFirebaseReady || !db) {
  throw new CMSConfigError(
