@@ -1,4 +1,4 @@
-import { getApp, getApps, initializeApp } from "firebase/app";
+  import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
@@ -9,8 +9,6 @@ import {
 import {
   initializeFirestore,
   getFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -31,7 +29,6 @@ let isFirebaseReady = false;
 let firebaseConfigError: string | null = null;
 
 try {
-  // Required Firebase variables
   const requiredConfig = {
     apiKey: firebaseConfig.apiKey,
     authDomain: firebaseConfig.authDomain,
@@ -49,32 +46,28 @@ try {
     );
   }
 
-  // Firebase App
+  // Initialize Firebase App
   app = getApps().length
     ? getApp()
     : initializeApp(firebaseConfig);
 
-  // Firebase Auth
+  // Initialize Firebase Auth
   auth = getAuth(app);
 
-  // Firestore
+  // Initialize Firestore
   //
-  // IMPORTANT:
-  // experimentalAutoDetectLongPolling is intentionally removed.
-  // We use the supported auto long-polling setting instead.
+  // Use memory cache instead of persistent IndexedDB cache.
+  // This avoids stale/offline-cache initialization problems.
   //
-  // persistentLocalCache gives Firestore an IndexedDB cache.
-  // This is NOT the CMS database. Firestore remains the source of truth.
+  // Force long polling is kept because it can help with
+  // proxy/network environments that have WebChannel issues.
   try {
     db = initializeFirestore(app, {
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager(),
-      }),
       experimentalForceLongPolling: true,
     });
   } catch (error) {
     console.warn(
-      "Firestore was already initialized. Reusing existing Firestore instance.",
+      "Firestore already initialized. Reusing existing instance.",
       error
     );
 
@@ -114,7 +107,7 @@ export enum OperationType {
   LIST = "list",
   GET = "get",
   WRITE = "write",
-}
+};
 
 export interface FirestoreErrorInfo {
   error: string;
