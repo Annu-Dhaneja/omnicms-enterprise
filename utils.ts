@@ -774,7 +774,7 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
     );
   }
 
-  const { doc, getDoc, setDoc } = await import('firebase/firestore');
+  const { doc, getDoc } = await import('firebase/firestore');
   const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
 
   let lastError: CMSLoadError | null = null;
@@ -783,17 +783,49 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
     try {
       const snap = await getDoc(ref);
 
-      if (snap.exists()) {
-        return snap.data() as BackupData;
+      if (!snap.exists()) {
+        throw new CMSLoadError(
+          'CMS document cms/main does not exist in Firestore. Please save CMS data once from the Admin Panel.',
+          'not-found'
+        );
       }
 
-      // First-time setup:
-      // If cms/main does not exist in Firestore, create it once
-      // using the existing local/default CMS data.
-      const seed = getCMSData();
+      return snap.data() as BackupData;
+    } catch (err) {
+      const classified =
+        err instanceof CMSLoadError
+          ? err
+          : classifyCMSError(err);
 
-      await setDoc(ref, seed);
+      lastError = classified;
 
+      const isLastAttempt =
+        attempt === CMS_LOAD_MAX_ATTEMPTS;
+
+      if (!classified.retryable || isLastAttempt) {
+        throw classified;
+      }
+
+      const delay =
+        CMS_LOAD_BASE_DELAY_MS *
+        Math.pow(2, attempt - 1);
+
+      console.warn(
+        `[CMS] Attempt ${attempt}/${CMS_LOAD_MAX_ATTEMPTS} failed (${classified.code}). Retrying in ${delay}ms.`
+      );
+
+      await sleep(delay);
+    }
+  }
+
+  throw (
+    lastError ??
+    new CMSLoadError(
+      'Unknown CMS load failure.',
+      'unknown'
+    )
+  );
+};
       return seed;
     } catch (err) {
       const classified = classifyCMSError(err);
