@@ -668,13 +668,66 @@ export const saveCMSData = async (data: BackupData): Promise<void> => {
  * content as if it were live.
  */
 export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
- const { db, isFirebaseReady } = const seed = getCMSData();
-return seed;;
+  const { db, isFirebaseReady } = await import('./firebase');
 
- if (!isFirebaseReady || !db) {
- throw new CMSConfigError(
- 'Firebase is not configured (missing VITE_FIREBASE_* environment variables).'
- );
+  if (!isFirebaseReady || !db) {
+    throw new CMSConfigError(
+      'Firebase is not configured (missing VITE_FIREBASE_* environment variables). The site cannot load live CMS content.'
+    );
+  }
+
+  const { doc, getDoc } = await import('firebase/firestore');
+  const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
+
+  let lastError: CMSLoadError | null = null;
+
+  for (let attempt = 1; attempt <= CMS_LOAD_MAX_ATTEMPTS; attempt++) {
+    try {
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        throw new CMSLoadError(
+          'CMS document cms/main does not exist in Firestore. Please save CMS data once from the Admin Panel.',
+          'not-found'
+        );
+      }
+
+      return snap.data() as BackupData;
+    } catch (err) {
+      const classified =
+        err instanceof CMSLoadError
+          ? err
+          : classifyCMSError(err);
+
+      lastError = classified;
+
+      const isLastAttempt =
+        attempt === CMS_LOAD_MAX_ATTEMPTS;
+
+      if (!classified.retryable || isLastAttempt) {
+        throw classified;
+      }
+
+      const delay =
+        CMS_LOAD_BASE_DELAY_MS *
+        Math.pow(2, attempt - 1);
+
+      console.warn(
+        `[CMS] Attempt ${attempt}/${CMS_LOAD_MAX_ATTEMPTS} failed (${classified.code}). Retrying in ${delay}ms.`
+      );
+
+      await sleep(delay);
+    }
+  }
+
+  throw (
+    lastError ??
+    new CMSLoadError(
+      'Unknown CMS load failure.',
+      'unknown'
+    )
+  );
+};
  }
 
  const { doc, getDoc, setDoc } = await import('firebase/firestore');
