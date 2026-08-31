@@ -739,19 +739,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * surface that failure to the admin as a real "save failed" state, never
  * report success and never fall back to localStorage.
  */
-export const saveCMSData = async (data: BackupData): Promise<void> => {
-  const { db, isFirebaseReady } = await import('./firebase');
-  if (!isFirebaseReady || !db) {
-    throw new CMSConfigError(
-      'Firebase is not configured (missing VITE_FIREBASE_* environment variables). CMS changes were NOT saved.'
-    );
-  }
-  const { doc, setDoc } = await import('firebase/firestore');
-  data.timestamp = new Date().toISOString();
-  // merge:true protects any field a different, older client doesn't know
-  // about; every admin save already sends the complete BackupData object.
-  await setDoc(doc(db, CMS_COLLECTION, CMS_DOC_ID), data, { merge: true });
-};
+if (!snap.exists()) {
+  throw new CMSLoadError(
+    'CMS document cms/main does not exist in Firestore. Please save CMS data once from the Admin Panel.',
+    'not-found'
+  );
+}
+
+return snap.data() as BackupData;
 
 /**
  * Loads the authoritative CMS document from Firestore on app startup.
