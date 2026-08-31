@@ -668,12 +668,9 @@ export const saveCMSData = async (data: BackupData): Promise<void> => {
  * content as if it were live.
  */
 export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
-  const { db, isFirebaseReady } = await import('./firebase');
-
-  if (!isFirebaseReady || !db) {
-    throw new CMSConfigError(
-      'Firebase is not configured (missing VITE_FIREBASE_* environment variables). The site cannot load live CMS content.'
-    );
+  const seed = getCMSData();
+  return seed;
+};
   }
 
   const { doc, getDoc } = await import('firebase/firestore');
