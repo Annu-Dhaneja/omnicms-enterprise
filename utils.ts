@@ -769,13 +769,16 @@ export const saveCMSData = async (data: BackupData): Promise<void> => {
 const CMS_LOAD_MAX_ATTEMPTS = 4; // 1 initial + 3 retries
 const CMS_LOAD_BASE_DELAY_MS = 800; // 0.8s, 1.6s, 3.2s
 
+```ts
 export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
   const { db, isFirebaseReady } = await import('./firebase');
+
   if (!isFirebaseReady || !db) {
     throw new CMSConfigError(
       'Firebase is not configured (missing VITE_FIREBASE_* environment variables). The site cannot load live CMS content.'
     );
   }
+
   const { doc, getDoc, setDoc } = await import('firebase/firestore');
   const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
 
@@ -784,40 +787,49 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
   for (let attempt = 1; attempt <= CMS_LOAD_MAX_ATTEMPTS; attempt++) {
     try {
       const snap = await getDoc(ref);
+
       if (snap.exists()) {
         return snap.data() as BackupData;
       }
-      // cms/main does not exist yet anywhere — one-time migration seed from
-      // whatever CMS data already exists (legacy localStorage engine falls
-      // back to hardcoded defaults internally if nothing is saved yet).
+
+      // First-time setup:
+      // If cms/main does not exist in Firestore, create it once
+      // using the existing local/default CMS data.
       const seed = getCMSData();
+
       await setDoc(ref, seed);
+
       return seed;
     } catch (err) {
       const classified = classifyCMSError(err);
       lastError = classified;
 
       const isLastAttempt = attempt === CMS_LOAD_MAX_ATTEMPTS;
+
       if (!classified.retryable || isLastAttempt) {
         throw classified;
       }
 
-      // Exponential backoff before retrying a genuinely temporary failure
-      // (unavailable / deadline-exceeded / internal / unknown). This is
-      // exactly the case that used to surface as a permanent
-      // "client is offline" error on a single transient hiccup.
-      const delay = CMS_LOAD_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      const delay =
+        CMS_LOAD_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+
       console.warn(
         `[CMS] Attempt ${attempt}/${CMS_LOAD_MAX_ATTEMPTS} failed (${classified.code}). Retrying in ${delay}ms.`
       );
+
       await sleep(delay);
     }
   }
 
-  // Unreachable in practice (the loop always returns or throws), but keeps
-  // TypeScript happy and guarantees we never resolve silently.
-  throw lastError ?? new CMSLoadError('Unknown CMS load failure.', 'unknown');
+  throw (
+    lastError ??
+    new CMSLoadError(
+      'Unknown CMS load failure.',
+      'unknown'
+    )
+  );
 };
+```
 
 /**
  * Live subscription to the CMS document so that a save from this tab,
