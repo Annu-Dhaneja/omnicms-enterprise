@@ -768,41 +768,41 @@ const CMS_LOAD_BASE_DELAY_MS = 800; // 0.8s, 1.6s, 3.2s
 export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
   const { db, isFirebaseReady } = await import('./firebase');
 
+  // Firebase unavailable → local default data
   if (!isFirebaseReady || !db) {
-    throw new CMSConfigError(
-      'Firebase is not configured (missing VITE_FIREBASE_* environment variables).'
-    );
-  }
-
-  const { doc, getDoc } = await import('firebase/firestore');
-
-  const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
-  const snap = await getDoc(ref);
-
-  // If valid CMS data exists in Firestore, use it.
-  if (snap.exists()) {
-    const data = snap.data() as BackupData;
-
-    // Prevent broken/incomplete CMS documents from crashing the website.
-    if (
-      data &&
-      Array.isArray(data.sectionOrders)
-    ) {
-      return data;
-    }
-
-    // Broken/incomplete Firestore document:
-    // use the local/default CMS data instead.
-    console.warn('Firestore CMS data is incomplete. Using default CMS data.');
     return getCMSData();
   }
 
-  // IMPORTANT:
-  // Never write/seed Firestore from the public website.
-  // Public users are allowed to READ, not WRITE.
-  return getCMSData();
-};
-      }
+  try {
+    const { doc, getDoc } = await import('firebase/firestore');
+
+    const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      return getCMSData();
+    }
+
+    const data = snap.data() as Partial<BackupData>;
+
+    // Incomplete Firestore document → safe local defaults
+    if (
+      !data.site ||
+      !data.hero ||
+      !data.about ||
+      !data.theme ||
+      !Array.isArray(data.sectionOrders)
+    ) {
+      console.warn('Incomplete cms/main document. Using default CMS data.');
+      return getCMSData();
+    }
+
+    return data as BackupData;
+  } catch (error) {
+    console.error('Firestore CMS read failed. Using local CMS data:', error);
+    return getCMSData();
+  }
+};      }
 
       return snap.data() as BackupData;
     } catch (err) {
