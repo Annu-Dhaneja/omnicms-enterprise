@@ -681,12 +681,13 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
   const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
   const snap = await getDoc(ref);
 
-  if (snap.exists()) {
-    return snap.data() as BackupData;
+  if (!snap.exists()) {
+    throw new CMSConfigError(
+      'CMS document cms/main was not found in Firestore.'
+    );
   }
 
-  // If cms/main does not exist, use local default CMS data.
-  return getCMSData();
+  return snap.data() as BackupData;
 };      }
 
       return snap.data() as BackupData;
