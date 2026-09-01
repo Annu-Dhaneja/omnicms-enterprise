@@ -770,24 +770,38 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
 
   if (!isFirebaseReady || !db) {
     throw new CMSConfigError(
-      'Firebase is not configured (missing VITE_FIREBASE_* environment variables). The site cannot load live CMS content.'
+      'Firebase is not configured (missing VITE_FIREBASE_* environment variables).'
     );
   }
 
   const { doc, getDoc } = await import('firebase/firestore');
+
   const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
+  const snap = await getDoc(ref);
 
-  let lastError: CMSLoadError | null = null;
+  // If valid CMS data exists in Firestore, use it.
+  if (snap.exists()) {
+    const data = snap.data() as BackupData;
 
-  for (let attempt = 1; attempt <= CMS_LOAD_MAX_ATTEMPTS; attempt++) {
-    try {
-      const snap = await getDoc(ref);
+    // Prevent broken/incomplete CMS documents from crashing the website.
+    if (
+      data &&
+      Array.isArray(data.sectionOrders)
+    ) {
+      return data;
+    }
 
-      if (!snap.exists()) {
-        throw new CMSLoadError(
-          'CMS document cms/main does not exist in Firestore. Please save CMS data once from the Admin Panel.',
-          'not-found'
-        );
+    // Broken/incomplete Firestore document:
+    // use the local/default CMS data instead.
+    console.warn('Firestore CMS data is incomplete. Using default CMS data.');
+    return getCMSData();
+  }
+
+  // IMPORTANT:
+  // Never write/seed Firestore from the public website.
+  // Public users are allowed to READ, not WRITE.
+  return getCMSData();
+};
       }
 
       return snap.data() as BackupData;
