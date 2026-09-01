@@ -681,10 +681,72 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
   const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
   const snap = await getDoc(ref);
 
-  if (!snap.exists()) {
-    throw new CMSConfigError(
-      'CMS document cms/main was not found in Firestore.'
-    );
+  if (snap.exists()) {
+    return snap.data() as BackupData;
+  }
+
+  // If cms/main does not exist, use local default CMS data.
+  return getCMSData();
+};      }
+
+      return snap.data() as BackupData;
+    } catch (err) {
+      const classified =
+        err instanceof CMSLoadError
+          ? err
+          : classifyCMSError(err);
+
+      lastError = classified;
+
+      const isLastAttempt =
+        attempt === CMS_LOAD_MAX_ATTEMPTS;
+
+      if (!classified.retryable || isLastAttempt) {
+        throw classified;
+      }
+
+      const delay =
+        CMS_LOAD_BASE_DELAY_MS *
+        Math.pow(2, attempt - 1);
+
+      console.warn(
+        `[CMS] Attempt ${attempt}/${CMS_LOAD_MAX_ATTEMPTS} failed (${classified.code}). Retrying in ${delay}ms.`
+      );
+
+      await sleep(delay);
+    }
+  }
+
+  throw (
+    lastError ??
+    new CMSLoadError(
+      'Unknown CMS load failure.',
+      'unknown'
+    )
+  );
+};
+ }
+
+ const { doc, getDoc, setDoc } = await import('firebase/firestore');
+
+ const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
+ const snap = await getDoc(ref);
+
+ const defaultData = getCMSData();
+
+ if (!snap.exists()) {
+ await setDoc(ref, defaultData);
+ return defaultData;
+ }
+
+ const cloudData = snap.data() as Partial<BackupData>;
+
+ const mergedData: BackupData = {
+   ...
+ };
+
+ return mergedData;
+ };
   }
 
   return snap.data() as BackupData;
