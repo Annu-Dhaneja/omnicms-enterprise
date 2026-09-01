@@ -128,4 +128,14 @@ export const logActivity = async (
   _activity: unknown
 ) => {
   return true;
+};export const getLeads = async () => {
+  return [];
+};
+
+export const saveLeads = async (_leads: unknown[]) => {
+  return true;
+};
+
+export const logActivity = async (_activity: unknown) => {
+  return true;
 };
