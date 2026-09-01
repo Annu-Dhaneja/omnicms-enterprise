@@ -689,45 +689,31 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
   return getCMSData();
 };      }
 
-      return snap.data() as BackupData;
-    } catch (err) {
-      const classified =
-        err instanceof CMSLoadError
-          ? err
-          : classifyCMSError(err);
+      export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
+  const { db, isFirebaseReady } = await import('./firebase');
 
-      lastError = classified;
-
-      const isLastAttempt =
-        attempt === CMS_LOAD_MAX_ATTEMPTS;
-
-      if (!classified.retryable || isLastAttempt) {
-        throw classified;
-      }
-
-      const delay =
-        CMS_LOAD_BASE_DELAY_MS *
-        Math.pow(2, attempt - 1);
-
-      console.warn(
-        `[CMS] Attempt ${attempt}/${CMS_LOAD_MAX_ATTEMPTS} failed (${classified.code}). Retrying in ${delay}ms.`
-      );
-
-      await sleep(delay);
-    }
+  if (!isFirebaseReady || !db) {
+    throw new CMSConfigError(
+      'Firebase is not configured (missing VITE_FIREBASE_* environment variables).'
+    );
   }
 
-  throw (
-    lastError ??
-    new CMSLoadError(
-      'Unknown CMS load failure.',
-      'unknown'
-    )
-  );
-};
- }
+  const { doc, getDoc, setDoc } = await import('firebase/firestore');
 
- const { doc, getDoc, setDoc } = await import('firebase/firestore');
+  const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    return snap.data() as BackupData;
+  }
+
+  // First-time setup: create the CMS document in Firestore
+  const defaultData = getCMSData();
+
+  await setDoc(ref, defaultData);
+
+  return defaultData;
+};
 
  const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
  const snap = await getDoc(ref);
