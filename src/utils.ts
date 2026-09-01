@@ -672,29 +672,6 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
 
   if (!isFirebaseReady || !db) {
     throw new CMSConfigError(
-      'Firebase is not configured. CMS data was not loaded.'
-    );
-  }
-
-  const { doc, getDoc } = await import('firebase/firestore');
-
-  const ref = doc(db, CMS_COLLECTION, CMS_DOC_ID);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) {
-    throw new CMSLoadError(
-      'CMS document cms/main does not exist in Firestore. Please save CMS data once from the Admin Panel.',
-      'not-found'
-    );
-  }
-
-  return snap.data() as BackupData;
-};
-  export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
-  const { db, isFirebaseReady } = await import('./firebase');
-
-  if (!isFirebaseReady || !db) {
-    throw new CMSConfigError(
       'Firebase is not configured (missing VITE_FIREBASE_* environment variables).'
     );
   }
@@ -710,8 +687,7 @@ export const loadAuthoritativeCMSData = async (): Promise<BackupData> => {
 
   // If cms/main does not exist, use local default CMS data.
   return getCMSData();
-};
-      }
+};      }
 
       return snap.data() as BackupData;
     } catch (err) {
