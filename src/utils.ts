@@ -136,16 +136,18 @@ export const saveLeads = async (_leads: unknown[]) => {
   return true;
 };
 
-export const logActivity = async (_activity: unknown) => {
-  return true;
-};export const getLeads = async () => {
+// AI Kundli / CRM helper functions
+export const getLeads = (): unknown[] => {
   return [];
 };
 
-export const saveLeads = async (_leads: unknown[]) => {
-  return true;
+export const saveLeads = (_leads: unknown[]): void => {
+  // CRM lead saving placeholder
 };
 
-export const logActivity = async (_activity: unknown) => {
-  return true;
+export const logActivity = (
+  _activity: unknown,
+  _details?: unknown
+): void => {
+  // Activity logging placeholder
 };
